@@ -1,0 +1,57 @@
+api:
+  port: 8091
+
+storages:
+  # [optional] default is 30s. Which time window will be used to deduplicate time series values.
+  # If set to zero, will turn off deduplication. Values should be followed by the unit of time.
+  # Example 3s (30 seconds), 30d (30 days), 1m (1 minute)
+  dedup: 120s
+  groups:
+    # [mandatory] The name of the group. (group names helps debugging, that's why it is mandatory)
+    - name: "some group name"
+      # [optional] default: fail_all
+      # What will happen if a single server fails to answer the query. A failure means an error.
+      # An empty response is NOT a failure, as no error has happened.
+      # The options are:
+      # fail_all: fail the whole query on this group
+      # partial_response: answer the query with the server that returned data, which might
+      # end up being a partial response
+      on_query_fail: fail_all
+      # [optional] In case you don't want to define a per instance time window, this is where a
+      # time window for all servers in this group is defined. If `time_window`s are re-defined on
+      # a per server basis, it will override these values from this config.
+      # Graviola will avoid querying it if the query is outide its time window.
+      # If this is not set, graviola will send all the queries to servers in this group
+      time_window:
+        # Times 3 formats. relative (now-4d), Unix (1136239445) and
+        # RFC3339 (1996-12-19T16:39:57-08:00) ( one more example as this case is difficult:
+        # 1985-04-12T23:20:50.52Z) (but do a favor to yourself and don't use timezones here)
+        # The time defined here will be parsed following the order they were mentioned above:
+        # relative, unix and RFC3339
+        start: "now-6h"
+        end: "now"
+      remotes:
+        # [optional] add it in case you want logs to come with the name of the server
+        - name: "my server 1"
+          # [mandatory] The address of the remote server
+          address: "https://localhost:9090"
+          # [optional] in case the remote server has a prefix for the querying path, which is /api/v1/query
+          path_prefix: ""
+          # [optional] Default 2 min.
+          # The time it will wait for a query response before considering it failed.
+          # Zero value means no timeout
+          # Itt should be set using `ms`, `s` or `m` units, which mean milliseconds, seconds
+          # and minutes, respectively.
+          timeout: 35s
+          # [optional] if this server has a fixed retention window, by setting data under this map
+          # Graviola will avoid querying it if the query is outide its time window
+          # If this is not set, graviola will send all the queries to this server.
+          # If a `time_window` is set on the parent group, this config will override it.
+          time_window:
+            # Times 3 formats. relative (now-4d), Unix (1136239445) and
+            # RFC3339 (1996-12-19T16:39:57-08:00) ( one more example as this case is difficult:
+            # 1985-04-12T23:20:50.52Z) (but do a favor to yourself and don't use timezones here)
+            # The time defined here will be parsed following the order they were mentioned above:
+            # relative, unix and RFC3339
+            start: "now-6h"
+            end: "now"
