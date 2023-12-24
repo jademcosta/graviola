@@ -65,6 +65,10 @@ vuln:
 	$(GOCMD) install golang.org/x/vuln/cmd/govulncheck@latest
 	govulncheck ./...
 
+update-deps:
+	$(GOCMD) get -u ./...
+	$(GOCMD) mod tidy
+
 ## Help:
 help: ## Show this help.
 	@echo ''
