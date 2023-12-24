@@ -14,6 +14,7 @@ type RemoteStorageMock struct {
 	calledWithSortSeries []bool
 	calledWithHints      []*storage.SelectHints
 	calledWithMatchers   [][]*labels.Matcher
+	closeCalled          int
 }
 
 func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
@@ -25,6 +26,7 @@ func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hint
 }
 
 func (mock *RemoteStorageMock) Close() error {
+	mock.closeCalled++
 	return nil
 }
 
