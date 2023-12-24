@@ -10,6 +10,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
@@ -42,9 +43,8 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 			&domain.GraviolaSeriesSet{
 				Series: []*domain.GraviolaSeries{
 					{
-						Lbs:  labels.FromStrings("__name__", "up", "instance", "localhost:9090", "job", "prometheus"),
-						Ts:   []int64{1702174837986},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("__name__", "up", "instance", "localhost:9090", "job", "prometheus"),
+						Datapoints: []model.SamplePair{{Timestamp: 1702174837986, Value: 1.0}},
 					},
 				},
 			},
@@ -55,19 +55,16 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 			&domain.GraviolaSeriesSet{
 				Series: []*domain.GraviolaSeries{
 					{
-						Lbs:  labels.FromStrings("__name__", "afirstseries", "instance", "localhost:9090", "job", "prometheus"),
-						Ts:   []int64{1702174837986},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("__name__", "afirstseries", "instance", "localhost:9090", "job", "prometheus"),
+						Datapoints: []model.SamplePair{{Timestamp: 1702174837986, Value: 1.0}},
 					},
 					{
-						Lbs:  labels.FromStrings("__name__", "csecondseries", "job", "prometheus", "xlastlabel", "any value"),
-						Ts:   []int64{1702174837986},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("__name__", "csecondseries", "job", "prometheus", "xlastlabel", "any value"),
+						Datapoints: []model.SamplePair{{Timestamp: 1702174837986, Value: 1.0}},
 					},
 					{
-						Lbs:  labels.FromStrings("__name__", "xlastseries", "aalabel1", "somelocal", "job", "prometheus"),
-						Ts:   []int64{1702174837986},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("__name__", "xlastseries", "aalabel1", "somelocal", "job", "prometheus"),
+						Datapoints: []model.SamplePair{{Timestamp: 1702174837986, Value: 1.0}},
 					},
 				},
 			},
@@ -78,9 +75,8 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 			&domain.GraviolaSeriesSet{
 				Series: []*domain.GraviolaSeries{
 					{
-						Lbs:  labels.FromStrings(),
-						Ts:   []int64{1702174837986},
-						Vals: []float64{77.0},
+						Lbs:        labels.FromStrings(),
+						Datapoints: []model.SamplePair{{Timestamp: 1702174837986, Value: 77.0}},
 					},
 				},
 			},
@@ -91,14 +87,12 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 			&domain.GraviolaSeriesSet{
 				Series: []*domain.GraviolaSeries{
 					{
-						Lbs:  labels.FromStrings(),
-						Ts:   []int64{1702174837986},
-						Vals: []float64{77.0},
+						Lbs:        labels.FromStrings(),
+						Datapoints: []model.SamplePair{{Timestamp: 1702174837986, Value: 77.0}},
 					},
 					{
-						Lbs:  labels.FromStrings("aaa", "111"),
-						Ts:   []int64{1702174837000},
-						Vals: []float64{81.1},
+						Lbs:        labels.FromStrings("aaa", "111"),
+						Datapoints: []model.SamplePair{{Timestamp: 1702174837000, Value: 81.1}},
 					},
 				},
 			},
@@ -109,19 +103,16 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 			&domain.GraviolaSeriesSet{
 				Series: []*domain.GraviolaSeries{
 					{
-						Lbs:  labels.FromStrings("job", "aaa"),
-						Ts:   []int64{1111},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("job", "aaa"),
+						Datapoints: []model.SamplePair{{Timestamp: 1111, Value: 1.0}},
 					},
 					{
-						Lbs:  labels.FromStrings("job", "prometheus"),
-						Ts:   []int64{1111},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("job", "prometheus"),
+						Datapoints: []model.SamplePair{{Timestamp: 1111, Value: 1.0}},
 					},
 					{
-						Lbs:  labels.FromStrings("xlastlabel", "any value"),
-						Ts:   []int64{1111},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("xlastlabel", "any value"),
+						Datapoints: []model.SamplePair{{Timestamp: 1111, Value: 1.0}},
 					},
 				},
 			},
@@ -132,19 +123,16 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 			&domain.GraviolaSeriesSet{
 				Series: []*domain.GraviolaSeries{ //__name__ is the first label because labels are sorted
 					{
-						Lbs:  labels.FromStrings("__name__", "xfirst", "xlastlabel", "any value"),
-						Ts:   []int64{1111},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("__name__", "xfirst", "xlastlabel", "any value"),
+						Datapoints: []model.SamplePair{{Timestamp: 1111, Value: 1.0}},
 					},
 					{
-						Lbs:  labels.FromStrings("__name__", "xxmiddle"), //The label comparison is made on the smallest number of labels
-						Ts:   []int64{1111},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("__name__", "xxmiddle"), //The label comparison is made on the smallest number of labels
+						Datapoints: []model.SamplePair{{Timestamp: 1111, Value: 1.0}},
 					},
 					{
-						Lbs:  labels.FromStrings("__name__", "xxxlast", "afirstlabelexceptnot", "prometheus"),
-						Ts:   []int64{1111},
-						Vals: []float64{1.0},
+						Lbs:        labels.FromStrings("__name__", "xxxlast", "afirstlabelexceptnot", "prometheus"),
+						Datapoints: []model.SamplePair{{Timestamp: 1111, Value: 1.0}},
 					},
 				},
 			},
@@ -188,6 +176,6 @@ func TestParsesVectorResponseCorrectlyWithNaN(t *testing.T) {
 
 	assert.Len(t, resultParsed.Series[0].Lbs, 0, "should have no labels")
 
-	assert.Equal(t, int64(17024837986), resultParsed.Series[0].Ts[0], "timestamp should have been parsed")
-	assert.True(t, math.IsNaN(resultParsed.Series[0].Vals[0]), "NaN value should have been parsed")
+	assert.Equal(t, model.Time(17024837986), resultParsed.Series[0].Datapoints[0].Timestamp, "timestamp should have been parsed")
+	assert.True(t, math.IsNaN(float64(resultParsed.Series[0].Datapoints[0].Value)), "NaN value should have been parsed")
 }

@@ -111,8 +111,8 @@ func TestParsesMatrixResponseCorrectlyWithNaNs(t *testing.T) {
 	assert.Equal(t, "handler", resultParsed.Series[0].Lbs[0].Name, "label name should have been parsed")
 	assert.Equal(t, "/", resultParsed.Series[0].Lbs[0].Value, "label value should have been parsed")
 
-	assert.Equal(t, int64(1701635640000), resultParsed.Series[0].Ts[0], "timestamp should have been parsed")
-	assert.True(t, math.IsNaN(resultParsed.Series[0].Vals[0]), "NaN value should have been parsed")
+	assert.Equal(t, model.Time(1701635640000), resultParsed.Series[0].Datapoints[0].Timestamp, "timestamp should have been parsed")
+	assert.True(t, math.IsNaN(float64(resultParsed.Series[0].Datapoints[0].Value)), "NaN value should have been parsed")
 }
 
 func loadMatrixCases() []string {
@@ -156,13 +156,15 @@ func extractSeriesFrom(t *testing.T, remoteAnswer string) []*domain.GraviolaSeri
 	series := make([]*domain.GraviolaSeries, 0)
 
 	for _, metric := range metrics {
-		timestamps := make([]int64, 0)
-		values := make([]float64, 0)
+		datapoints := make([]model.SamplePair, 0)
 		lbls := make(map[string]string, 0)
 
 		for _, sample := range metric.Values {
-			timestamps = append(timestamps, int64(sample.Timestamp))
-			values = append(values, float64(sample.Value))
+
+			datapoints = append(datapoints, model.SamplePair{
+				Timestamp: sample.Timestamp,
+				Value:     sample.Value,
+			})
 		}
 
 		for lblName, lblValue := range metric.Metric {
@@ -170,9 +172,8 @@ func extractSeriesFrom(t *testing.T, remoteAnswer string) []*domain.GraviolaSeri
 		}
 
 		series = append(series, &domain.GraviolaSeries{
-			Lbs:  labels.FromMap(lbls),
-			Ts:   timestamps,
-			Vals: values,
+			Lbs:        labels.FromMap(lbls),
+			Datapoints: datapoints,
 		})
 	}
 	return series
