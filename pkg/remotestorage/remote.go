@@ -52,85 +52,124 @@ func (rStorage *RemoteStorage) Select(sortSeries bool, hints *storage.SelectHint
 
 	promQLQuery, err := ToPromQLQuery(matchers)
 	if err != nil {
-		rStorage.logg.Error("error creating query params", "error", err)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("error creating query params: %w", err)
+		rStorage.logg.Error("param creation", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	params := url.Values{}
 	params.Set("query", *promQLQuery)
 
 	var urlForQuery string
-	if hints.End == 0 || hints.Start == 0 {
+	if hints.End == hints.Start {
 		urlForQuery = rStorage.URLs["instant_query"]
 	} else {
 		params.Set("start", fmt.Sprintf("%d", hints.Start))
 		params.Set("end", fmt.Sprintf("%d", hints.End))
 		if hints.Step != 0 {
 			params.Set("step", fmt.Sprintf("%d", hints.Step))
-		}
+		} //TODO: allow a default step to be set, and define one default if it is not set
 
 		urlForQuery = rStorage.URLs["range_query"]
 	}
 
 	req, err := http.NewRequest(http.MethodPost, urlForQuery, strings.NewReader(params.Encode()))
 	if err != nil {
-		rStorage.logg.Error("error creating request", "error", err)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("error creating request: %w", err)
+		rStorage.logg.Error("request creation", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := rStorage.client.Do(req)
 	if err != nil {
-		rStorage.logg.Error("error making request", "error", err)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("error making request: %w", err)
+		rStorage.logg.Error("request making", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		rStorage.logg.Error("error reading body", "error", err)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("error reading request body: %w", err)
+		rStorage.logg.Error("request body reading", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	if !responseSuccessful(resp.StatusCode) {
-		rStorage.logg.Error("server answered with non-succesful status code", "code", resp.StatusCode)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("server answered with non-succesful status code %d", resp.StatusCode)
+		rStorage.logg.Error("non-successful status code", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	responseFromServer, err := parseResponse(data)
 	if err != nil {
-		rStorage.logg.Error("unable to parse target server response", "error", err)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("unable to parse server response %w", err)
+		rStorage.logg.Error("unable to parse response", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	if responseFromServer.Status == prometheusStatusError {
-		rStorage.logg.Error("parsed response informed failure", "error", responseFromServer.Error)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("parsed response informed failure %s", responseFromServer.Error)
+		rStorage.logg.Error("answer informed failure", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
-	//TODO: usar json.RawMessage https://mariadesouza.com/2017/09/07/custom-unmarshal-json-in-golang/
 
 	reencodedData, err := json.Marshal(responseFromServer.Data)
 	if err != nil {
-		rStorage.logg.Error("error when reencoding data part of response", "error", err)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("error when reencoding data part of response: %w", err)
+		rStorage.logg.Error("marshal failure", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
-	responseTSData, err := rStorage.parseTimeSeriesData(reencodedData, sortSeries)
+	responseTSData := rStorage.parseTimeSeriesData(reencodedData, sortSeries)
 	if err != nil {
-		rStorage.logg.Error("unable to parse time-series data", "error", err)
-		return storage.NoopSeriesSet()
+		e := fmt.Errorf("unable to parse time-series data: %w", err)
+		rStorage.logg.Error("parsing time-series data", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
+	}
+
+	if len(responseFromServer.Warnings) > 0 {
+		responseTSData.Annots = *annotations.New()
+		responseTSData.Annots.Add(fmt.Errorf("warnings: %v", responseFromServer.Warnings))
 	}
 
 	return responseTSData
-	//TODO: in case of warnings, how to proceed?
 }
 
 // LabelQuerier
 //
 // Close releases the resources of the Querier.
 func (rStorage *RemoteStorage) Close() error {
-	rStorage.logg.Info("Group: Close")
+	//TODO: cancel all requests
 	return nil
 }
 
@@ -141,7 +180,7 @@ func (rStorage *RemoteStorage) Close() error {
 //	// If matchers are specified the returned result set is reduced
 //	// to label values of metrics matching the matchers.
 func (rStorage *RemoteStorage) LabelValues(name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	rStorage.logg.Info("Group: LabelValues")
+	//TODO: implement me
 	return []string{"myownlabelval"}, map[string]error{}, nil
 }
 
@@ -151,45 +190,101 @@ func (rStorage *RemoteStorage) LabelValues(name string, matchers ...*labels.Matc
 //	// If matchers are specified the returned result set is reduced
 //	// to label names of metrics matching the matchers.
 func (rStorage *RemoteStorage) LabelNames(matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	rStorage.logg.Info("GraviolaQuerier: LabelNames")
+	//TODO: implement me
 	return []string{"myownlabelnames"}, map[string]error{}, nil
 }
 
-func (rStorage *RemoteStorage) parseTimeSeriesData(data []byte, sorted bool) (storage.SeriesSet, error) {
+func (rStorage *RemoteStorage) parseTimeSeriesData(data []byte, sorted bool) *domain.GraviolaSeriesSet {
 
 	var resultMap map[string]*json.RawMessage
 	err := json.Unmarshal(data, &resultMap)
 	if err != nil {
-		return storage.NoopSeriesSet(), fmt.Errorf("decoding data: %w", err)
+		e := fmt.Errorf("decoding data: %w", err)
+		rStorage.logg.Error("decoding", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	var resultType string
 	err = json.Unmarshal(*resultMap["resultType"], &resultType)
 	if err != nil {
-		return storage.NoopSeriesSet(), fmt.Errorf("decoding resultType %v: %w", *resultMap["resultType"], err)
+		e := fmt.Errorf("decoding resultType: %w", err)
+		rStorage.logg.Error("getting result type", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	resultValue, ok := resultMap["result"]
 	if !ok {
-		return storage.NoopSeriesSet(), fmt.Errorf("no result value")
+		e := fmt.Errorf("empty result")
+		rStorage.logg.Error("reading result", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	}
 
 	switch parser.ValueType(resultType) {
 	case parser.ValueTypeNone:
-		return storage.NoopSeriesSet(), nil
-	case parser.ValueTypeString:
-		rStorage.logg.Error("parsing string result type is not supported yet")
-		return storage.NoopSeriesSet(), nil
-	case parser.ValueTypeScalar:
-		rStorage.logg.Error("parsing scalar result type is not supported yet")
-		return storage.NoopSeriesSet(), nil
+		e := fmt.Errorf("valueType is 'none'")
+		rStorage.logg.Error("decoding value type", "error", e)
+
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
+	case parser.ValueTypeString: //TODO: implement me
+		e := fmt.Errorf("parsing 'string' result type is not supported yet")
+		rStorage.logg.Error("decoding value type", "error", e)
+
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
+	case parser.ValueTypeScalar: //TODO: implement me
+		e := fmt.Errorf("parsing 'scalar' result type is not supported yet")
+		rStorage.logg.Error("decoding value type", "error", e)
+
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
 	case parser.ValueTypeVector:
-		return parseResultTypeVector(*resultValue, sorted)
+		result, err := parseResultTypeVector(*resultValue, sorted)
+		if err != nil {
+			e := fmt.Errorf("error parsing vector result type: %w", err)
+			rStorage.logg.Error("parsing vector type", "error", e)
+
+			return &domain.GraviolaSeriesSet{
+				Erro:   e,
+				Annots: map[string]error{"remote_storage": e},
+			}
+		}
+		return result
 	case parser.ValueTypeMatrix:
-		return parseResultTypeMatrix(*resultValue, sorted)
+		result, err := parseResultTypeMatrix(*resultValue, sorted)
+		if err != nil {
+			e := fmt.Errorf("error parsing vector result type: %w", err)
+			rStorage.logg.Error("parsing vector type", "error", e)
+
+			return &domain.GraviolaSeriesSet{
+				Erro:   e,
+				Annots: map[string]error{"remote_storage": e},
+			}
+		}
+		return result
 	}
 
-	return storage.NoopSeriesSet(), fmt.Errorf("invalid result type %s", resultType)
+	e := fmt.Errorf("invalid result type %s", resultType)
+	rStorage.logg.Error("decoding value type", "error", e)
+	return &domain.GraviolaSeriesSet{
+		Erro:   e,
+		Annots: map[string]error{"remote_storage": e},
+	}
 }
 
 func generateURLs(conf config.RemoteConfig, logg *graviolalog.Logger) map[string]string {
@@ -220,11 +315,11 @@ func parseResponse(data []byte) (*api_v1.Response, error) {
 	return resp, err
 }
 
-func parseResultTypeVector(data []byte, sorted bool) (storage.SeriesSet, error) {
+func parseResultTypeVector(data []byte, sorted bool) (*domain.GraviolaSeriesSet, error) {
 	var metrics model.Vector
 	err := json.Unmarshal(data, &metrics)
 	if err != nil {
-		return storage.NoopSeriesSet(), fmt.Errorf("error parsing result: %w", err)
+		return nil, fmt.Errorf("error parsing result: %w", err)
 	}
 
 	lblBuilder := labels.NewScratchBuilder(8) //TODO: magic number
@@ -255,11 +350,11 @@ func parseResultTypeVector(data []byte, sorted bool) (storage.SeriesSet, error) 
 	}, nil
 }
 
-func parseResultTypeMatrix(data []byte, sorted bool) (storage.SeriesSet, error) {
+func parseResultTypeMatrix(data []byte, sorted bool) (*domain.GraviolaSeriesSet, error) {
 	var metrics model.Matrix
 	err := json.Unmarshal(data, &metrics)
 	if err != nil {
-		return storage.NoopSeriesSet(), fmt.Errorf("error parsing result: %w", err)
+		return nil, fmt.Errorf("error parsing result: %w", err)
 	}
 
 	lblBuilder := labels.NewScratchBuilder(8) //TODO: magic number
