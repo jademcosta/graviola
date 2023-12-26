@@ -9,6 +9,7 @@ type GraviolaSeriesSet struct {
 	Series  []*GraviolaSeries
 	current int
 	Annots  annotations.Annotations
+	Erro    error
 }
 
 // SeriesSet
@@ -27,6 +28,9 @@ func (gSet *GraviolaSeriesSet) At() storage.Series {
 // The error that iteration as failed with.
 // When an error occurs, set cannot continue to iterate.
 func (gSet *GraviolaSeriesSet) Err() error {
+	if gSet.Erro != nil {
+		return gSet.Erro
+	}
 	return nil
 }
 

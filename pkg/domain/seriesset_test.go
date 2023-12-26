@@ -88,3 +88,11 @@ func TestAtAndNextAreConnectedAndKeepTheProvidedOrder(t *testing.T) {
 
 	assert.False(t, sut.Next(), "should return false")
 }
+
+func TestReturnsErrorIfItNotNil(t *testing.T) {
+	sut := &domain.GraviolaSeriesSet{}
+	assert.Nil(t, sut.Err(), "should return nil when no error is set")
+
+	sut = &domain.GraviolaSeriesSet{Erro: context.DeadlineExceeded}
+	assert.Equal(t, context.DeadlineExceeded, sut.Err(), "should return the error when it is set")
+}
