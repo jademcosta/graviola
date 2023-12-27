@@ -1,12 +1,14 @@
 package mergestrategy_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup/mergestrategy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -76,6 +78,7 @@ func TestTheMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 1.1}, {Timestamp: 1703379286017, Value: 1.2}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
@@ -110,6 +113,7 @@ func TestTheMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 1.1}, {Timestamp: 1703379286017, Value: 1.2}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
@@ -148,6 +152,7 @@ func TestTheMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 1.1}, {Timestamp: 1703379286017, Value: 1.2}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
@@ -198,9 +203,35 @@ func TestTheMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 1.1}, {Timestamp: 1703379286017, Value: 1.2}, {Timestamp: 1703379316017, Value: 1.3}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
+	})
+
+	t.Run("merges Annotations of all SeriesSets", func(t *testing.T) {
+
+		err1 := errors.New("some random error")
+		err2 := errors.New("expected error")
+
+		seriesSet := []*domain.GraviolaSeriesSet{
+			{Annots: annotations.New().Add(err1)},
+			{Annots: annotations.New().Add(err2)},
+			{Annots: annotations.New().Add(err2)},
+			{Annots: annotations.New().Add(err2)},
+		}
+
+		sut := mergestrategy.NewKeepBiggestMergeStrategy()
+
+		resp := sut.Merge(cast(seriesSet))
+
+		parsedSet, ok := resp.(*domain.GraviolaSeriesSet)
+		assert.True(t, ok, "parsing should work")
+
+		assert.Len(t, parsedSet.Annots, 2, "should keep all annotations")
+		assert.Contains(t, parsedSet.Warnings(), err1.Error(), "should contain the annotation")
+		assert.Contains(t, parsedSet.Warnings(), err2.Error(), "should contain the annotation")
+		assert.Len(t, parsedSet.Series, 0, "should not create any series out of nothing")
 	})
 }

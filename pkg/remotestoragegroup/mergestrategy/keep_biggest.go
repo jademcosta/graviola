@@ -29,13 +29,11 @@ func (merger *KeepBiggestMergeStrategy) Merge(seriesSets []storage.SeriesSet) st
 
 	graviolaSeries := keepOnlyGraviolaSeries(seriesSets)
 
-	if len(graviolaSeries) == 0 {
-		return storage.NoopSeriesSet()
+	if len(graviolaSeries) != 0 {
+		slices.SortFunc(graviolaSeries, func(a, b *domain.GraviolaSeries) int {
+			return labels.Compare(a.Labels(), b.Labels())
+		})
 	}
-
-	slices.SortFunc(graviolaSeries, func(a, b *domain.GraviolaSeries) int {
-		return labels.Compare(a.Labels(), b.Labels())
-	})
 
 	mergedSeries := make([]*domain.GraviolaSeries, 0, len(graviolaSeries))
 
@@ -58,9 +56,14 @@ func (merger *KeepBiggestMergeStrategy) Merge(seriesSets []storage.SeriesSet) st
 		}
 	}
 
-	mergedSeries = append(mergedSeries, currentSeries)
+	if currentSeries != nil {
+		mergedSeries = append(mergedSeries, currentSeries)
+	}
+
+	annots := mergeAnnotations(seriesSets)
 
 	return &domain.GraviolaSeriesSet{
 		Series: mergedSeries,
+		Annots: *annots,
 	}
 }

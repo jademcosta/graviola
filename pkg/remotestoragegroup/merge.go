@@ -16,7 +16,6 @@ type MergeStrategy interface {
 type MergeQuerier struct {
 	queriers        []storage.Querier
 	seriesSetMerger MergeStrategy
-	// logg     *graviolalog.Logger
 }
 
 func NewMergeQuerier(queriers []storage.Querier, seriesSetMerger MergeStrategy) *MergeQuerier {
@@ -31,7 +30,6 @@ func NewMergeQuerier(queriers []storage.Querier, seriesSetMerger MergeStrategy) 
 }
 
 // Querier
-//
 // Select returns a set of series that matches the given label matchers.
 // Caller can specify if it requires returned series to be sorted. Prefer not requiring sorting for better performance.
 // It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
@@ -73,7 +71,6 @@ func (mq *MergeQuerier) Select(ctx context.Context, sortSeries bool, hints *stor
 }
 
 // LabelQuerier
-//
 // Close releases the resources of the Querier.
 func (mq *MergeQuerier) Close() error {
 	var err []error
@@ -91,21 +88,19 @@ func (mq *MergeQuerier) Close() error {
 }
 
 // LabelQuerier
-//
-//	// LabelValues returns all potential values for a label name.
-//	// It is not safe to use the strings beyond the lifetime of the querier.
-//	// If matchers are specified the returned result set is reduced
-//	// to label values of metrics matching the matchers.
+// LabelValues returns all potential values for a label name.
+// It is not safe to use the strings beyond the lifetime of the querier.
+// If matchers are specified the returned result set is reduced
+// to label values of metrics matching the matchers.
 func (mq *MergeQuerier) LabelValues(name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	//TODO: implement me
 	return []string{"myownlabelval"}, map[string]error{}, nil
 }
 
 // LabelQuerier
-//
-//	// LabelNames returns all the unique label names present in the block in sorted order.
-//	// If matchers are specified the returned result set is reduced
-//	// to label names of metrics matching the matchers.
+// LabelNames returns all the unique label names present in the block in sorted order.
+// If matchers are specified the returned result set is reduced
+// to label names of metrics matching the matchers.
 func (mq *MergeQuerier) LabelNames(matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	//TODO: implement me
 	return []string{"myownlabelnames"}, map[string]error{}, nil
