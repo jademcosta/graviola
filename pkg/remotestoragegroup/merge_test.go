@@ -2,7 +2,6 @@ package remotestoragegroup_test
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"testing"
 
@@ -23,11 +22,9 @@ func (mock *mockMergeStrategy) Merge(seriesSets []storage.SeriesSet) storage.Ser
 	mock.calledWith = append(mock.calledWith, seriesSets)
 
 	if mock.toReturn != nil {
-		fmt.Println("NOT NIL!")
 		return mock.toReturn
 	}
 
-	fmt.Println("OMG NIL!")
 	return storage.NoopSeriesSet()
 }
 
