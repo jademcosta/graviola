@@ -4,11 +4,10 @@ go 1.21.1
 
 require (
 	github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd
-	github.com/prometheus/client_golang v1.17.0
+	github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/common v0.45.0
 	github.com/prometheus/prometheus v0.48.1
 	github.com/stretchr/testify v1.8.4
-	go.uber.org/zap v1.26.0
 )
 
 require (
@@ -39,7 +38,6 @@ require (
 	github.com/go-openapi/swag v0.22.6 // indirect
 	github.com/go-openapi/validate v0.22.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
@@ -52,7 +50,6 @@ require (
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
