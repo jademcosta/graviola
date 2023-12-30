@@ -2,6 +2,7 @@ package remotestoragegroup_test
 
 import (
 	"context"
+	"sync"
 
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/prometheus/prometheus/model/labels"
@@ -15,9 +16,13 @@ type RemoteStorageMock struct {
 	calledWithHints      []*storage.SelectHints
 	calledWithMatchers   [][]*labels.Matcher
 	closeCalled          int
+	mu                   sync.Mutex
 }
 
 func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
+	mock.mu.Lock()
+	defer mock.mu.Unlock()
+
 	mock.calledWithSortSeries = append(mock.calledWithSortSeries, sortSeries)
 	mock.calledWithHints = append(mock.calledWithHints, hints)
 	mock.calledWithMatchers = append(mock.calledWithMatchers, matchers)

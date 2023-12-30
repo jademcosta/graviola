@@ -34,7 +34,6 @@ func NewMergeQuerier(queriers []storage.Querier, seriesSetMerger MergeStrategy) 
 // Caller can specify if it requires returned series to be sorted. Prefer not requiring sorting for better performance.
 // It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
 func (mq *MergeQuerier) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
-
 	if len(mq.queriers) == 0 {
 		return storage.NoopSeriesSet()
 	}

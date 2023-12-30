@@ -82,6 +82,7 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 			`query={labelName="labelVal",}`,
 			true,
 		},
+		//TODO: add more cases
 	}
 
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })

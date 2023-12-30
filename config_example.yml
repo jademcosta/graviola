@@ -48,7 +48,7 @@ storages:
           # If this is not set, graviola will send all the queries to this server.
           # If a `time_window` is set on the parent group, this config will override it.
           time_window:
-            # Times 3 formats. relative (now-4d), Unix (1136239445) and
+            # Accepts 3 time formats. relative (now-4d), Unix (1136239445) and
             # RFC3339 (1996-12-19T16:39:57-08:00) ( one more example as this case is difficult:
             # 1985-04-12T23:20:50.52Z) (but do a favor to yourself and don't use timezones here)
             # The time defined here will be parsed following the order they were mentioned above:

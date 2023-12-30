@@ -1,65 +1,162 @@
 package remotestoragegroup_test
 
 import (
+	"context"
+	"math/rand"
+	"reflect"
+	"sync"
+	"testing"
+
 	"github.com/jademcosta/graviola/pkg/config"
+	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/storage"
+	"github.com/stretchr/testify/assert"
 )
 
 var logg *graviolalog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 
-// func TestClose(t *testing.T) {
+func TestCloseIsSentToRemotes(t *testing.T) {
+	mockStorage1 := &RemoteStorageMock{}
+	mockStorage2 := &RemoteStorageMock{}
 
-// 	sut := remotestoragegroup.NewGroup(logg, "any name", make([]storage.Querier, 0))
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut.Close()
 
-// 	assert.Nil(t, sut.Close(), "should always return nil")
-// }
+	assert.Equal(t, 1, mockStorage1.closeCalled, "should have called close on wrapper remotes")
+	assert.Equal(t, 1, mockStorage2.closeCalled, "should have called close on wrapper remotes")
+}
 
-// func TestMergesMultipleRemoteStorageResults(t *testing.T) {
+func TestSelect(t *testing.T) {
 
-// 	series1 := []*domain.GraviolaSeries{
-// 		{Lbs: labels.FromStrings("yyyyy", "zzzzz"),
-// 			Datapoints: []model.SamplePair{{Timestamp: 123456, Value: 9.9}, {Timestamp: 123486, Value: 11.11}}},
-// 		{Lbs: labels.FromStrings("label1", "value1", "labelx", "valuey"),
-// 			Datapoints: []model.SamplePair{{Timestamp: 123, Value: 1.23}, {Timestamp: 456, Value: 4.56}}},
-// 	}
+	mockStorage1 := &RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("label1", "val1"),
+					Datapoints: []model.SamplePair{{Timestamp: 5819, Value: 5.9}}},
+			},
+		},
+	}
+	mockStorage2 := &RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("label2", "val2"),
+					Datapoints: []model.SamplePair{{Timestamp: 5999, Value: 5.1}}},
+			},
+		},
+	}
 
-// 	seriesSet1 := &domain.GraviolaSeriesSet{Series: series1}
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
 
-// 	series2 := []*domain.GraviolaSeries{
-// 		{Lbs: labels.FromStrings("yyyyy", "zzzzz"),
-// 			Datapoints: []model.SamplePair{{Timestamp: 789, Value: 7.89}, {Timestamp: 101112, Value: 10.1112}}},
-// 		{Lbs: labels.FromStrings("aaaaa", "zzzzz"),
-// 			Datapoints: []model.SamplePair{{Timestamp: 131415, Value: 13.1415}, {Timestamp: 161718, Value: 16.1718}}},
-// 	}
+	ctx := context.Background()
+	sorted := true
+	hints := &storage.SelectHints{}
+	matchers := []*labels.Matcher{
+		{Type: labels.MatchEqual,
+			Name:  "somename",
+			Value: "somevalforlabel"},
+		{Type: labels.MatchEqual,
+			Name:  "somename2",
+			Value: "somevalforlabel2"},
+	}
 
-// 	seriesSet2 := &domain.GraviolaSeriesSet{Series: series2}
+	mergedSeries := sut.Select(ctx, sorted, hints, matchers...)
+	graviolaSeriesSet, ok := mergedSeries.(*domain.GraviolaSeriesSet)
+	assert.True(t, ok, "should be a GraviolaSeriesSet")
 
-// 	remotes := make([]storage.Querier, 0)
-// 	remotes = append(remotes, &RemoteStorageMock{
-// 		SeriesSet: seriesSet1,
-// 	})
-// 	remotes = append(remotes, &RemoteStorageMock{
-// 		SeriesSet: seriesSet2,
-// 	})
+	assert.Len(t, graviolaSeriesSet.Series, 2, "should have all the remote storage series")
 
-// 	sut := remotestoragegroup.NewGroup(logg, "any name", remotes)
+	for _, serie := range graviolaSeriesSet.Series {
+		if reflect.DeepEqual(serie.Labels().Map(), labels.FromStrings("label1", "val1").Map()) {
+			assert.Equal(t, []model.SamplePair{{Timestamp: 5819, Value: 5.9}}, serie.Datapoints,
+				"should have returned the correct series datapoints")
+		} else {
+			assert.Equal(t, []model.SamplePair{{Timestamp: 5999, Value: 5.1}}, serie.Datapoints,
+				"should have returned the correct series datapoints")
+		}
+	}
+}
 
-// 	result := sut.Select(context.Background(), true, &storage.SelectHints{})
+func TestConcurrentSelects(t *testing.T) {
+	goroutinesTotal := 10
 
-// 	assert.Panics(t, func() { result.At() }, "should panic if At() is called without Next() first")
+	time1 := rand.Int()
+	value1 := rand.Float64()
+	samplePair1 := model.SamplePair{Timestamp: model.Time(time1), Value: model.SampleValue(value1)}
 
-// 	assert.True(t, result.Next(), "should have Next")
-// 	series := result.At()
-// 	assert.Equal(t, "{aaaaa=\"zzzzz\"}", series.Labels().String(), "should return the correct series")
+	mockStorage1 := &RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("label1", "val1"),
+					Datapoints: []model.SamplePair{samplePair1}},
+			},
+		},
+	}
 
-// 	assert.True(t, result.Next(), "should have Next")
-// 	series = result.At()
-// 	assert.Equal(t, "{label1=\"value1\", labelx=\"valuey\"}", series.Labels().String(), "should return the correct series")
+	time2 := rand.Int()
+	value2 := rand.Float64()
+	samplePair2 := model.SamplePair{Timestamp: model.Time(time2), Value: model.SampleValue(value2)}
 
-// 	assert.True(t, result.Next(), "should have Next")
-// 	series = result.At()
-// 	assert.Equal(t, "{yyyyy=\"zzzzz\"}", series.Labels().String(), "should return the correct series")
+	mockStorage2 := &RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("label2", "val2"),
+					Datapoints: []model.SamplePair{samplePair2}},
+			},
+		},
+	}
 
-// 	assert.False(t, result.Next(), "should NOT have Next")
-// 	assert.Panics(t, func() { result.At() }, "should panic if At() is called after Next() returns false")
-// }
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+
+	ctx := context.Background()
+	sorted := true
+	hints := &storage.SelectHints{}
+	matchers := []*labels.Matcher{
+		{Type: labels.MatchEqual,
+			Name:  "somename",
+			Value: "somevalforlabel"},
+		{Type: labels.MatchEqual,
+			Name:  "somename2",
+			Value: "somevalforlabel2"},
+	}
+
+	results := make(chan storage.SeriesSet, goroutinesTotal)
+	var wg sync.WaitGroup
+	wg.Add(goroutinesTotal)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for i := 0; i < goroutinesTotal; i++ {
+		go func() {
+			results <- sut.Select(ctx, sorted, hints, matchers...)
+			wg.Done()
+		}()
+	}
+
+	counterOfResults := 0
+	for res := range results {
+		counterOfResults++
+
+		graviolaSeriesSet, ok := res.(*domain.GraviolaSeriesSet)
+		assert.True(t, ok, "should be a GraviolaSeriesSet")
+		assert.Len(t, graviolaSeriesSet.Series, 2, "should have all the remote storage series")
+
+		for _, serie := range graviolaSeriesSet.Series {
+			if reflect.DeepEqual(serie.Labels().Map(), labels.FromStrings("label1", "val1").Map()) {
+				assert.Equal(t, []model.SamplePair{samplePair1}, serie.Datapoints,
+					"should have returned the correct series datapoints")
+			} else {
+				assert.Equal(t, []model.SamplePair{samplePair2}, serie.Datapoints,
+					"should have returned the correct series datapoints")
+			}
+		}
+	}
+
+	assert.Equal(t, goroutinesTotal, counterOfResults, "should have returned all results")
+}
