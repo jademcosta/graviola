@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/jademcosta/graviola/internal/mocks"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
@@ -22,19 +23,19 @@ import (
 var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 
 func TestCloseIsSentToRemotes(t *testing.T) {
-	mockStorage1 := &RemoteStorageMock{}
-	mockStorage2 := &RemoteStorageMock{}
+	mockStorage1 := &mocks.RemoteStorageMock{}
+	mockStorage2 := &mocks.RemoteStorageMock{}
 
 	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
 	sut.Close()
 
-	assert.Equal(t, 1, mockStorage1.closeCalled, "should have called close on wrapper remotes")
-	assert.Equal(t, 1, mockStorage2.closeCalled, "should have called close on wrapper remotes")
+	assert.Equal(t, 1, mockStorage1.CloseCalled, "should have called close on wrapper remotes")
+	assert.Equal(t, 1, mockStorage2.CloseCalled, "should have called close on wrapper remotes")
 }
 
 func TestSelect(t *testing.T) {
 
-	mockStorage1 := &RemoteStorageMock{
+	mockStorage1 := &mocks.RemoteStorageMock{
 		SeriesSet: &domain.GraviolaSeriesSet{
 			Series: []*domain.GraviolaSeries{
 				{Lbs: labels.FromStrings("label1", "val1"),
@@ -42,7 +43,7 @@ func TestSelect(t *testing.T) {
 			},
 		},
 	}
-	mockStorage2 := &RemoteStorageMock{
+	mockStorage2 := &mocks.RemoteStorageMock{
 		SeriesSet: &domain.GraviolaSeriesSet{
 			Series: []*domain.GraviolaSeries{
 				{Lbs: labels.FromStrings("label2", "val2"),
@@ -89,7 +90,7 @@ func TestConcurrentSelects(t *testing.T) {
 	value1 := rand.Float64()
 	samplePair1 := model.SamplePair{Timestamp: model.Time(time1), Value: model.SampleValue(value1)}
 
-	mockStorage1 := &RemoteStorageMock{
+	mockStorage1 := &mocks.RemoteStorageMock{
 		SeriesSet: &domain.GraviolaSeriesSet{
 			Series: []*domain.GraviolaSeries{
 				{Lbs: labels.FromStrings("label1", "val1"),
@@ -102,7 +103,7 @@ func TestConcurrentSelects(t *testing.T) {
 	value2 := rand.Float64()
 	samplePair2 := model.SamplePair{Timestamp: model.Time(time2), Value: model.SampleValue(value2)}
 
-	mockStorage2 := &RemoteStorageMock{
+	mockStorage2 := &mocks.RemoteStorageMock{
 		SeriesSet: &domain.GraviolaSeriesSet{
 			Series: []*domain.GraviolaSeries{
 				{Lbs: labels.FromStrings("label2", "val2"),
@@ -168,7 +169,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	timestampsGenerated := make([]int, 0)
 	valuesGenerated := make([]float64, 0)
 
-	mockStorage1 := &RemoteStorageMock{
+	mockStorage1 := &mocks.RemoteStorageMock{
 		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int() //TODO: extract this logic to a function
@@ -199,7 +200,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 		},
 	}
 
-	mockStorage2 := &RemoteStorageMock{
+	mockStorage2 := &mocks.RemoteStorageMock{
 		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int()

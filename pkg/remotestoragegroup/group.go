@@ -54,10 +54,10 @@ func (grp *Group) Close() error {
 // It is not safe to use the strings beyond the lifetime of the querier.
 // If matchers are specified the returned result set is reduced
 // to label values of metrics matching the matchers.
-func (grp *Group) LabelValues(name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (grp *Group) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
 
-	vals, annots, err := mergeQuerier.LabelValues(name, matchers...)
+	vals, annots, err := mergeQuerier.LabelValues(ctx, name, matchers...)
 	return vals, annots, err
 }
 
@@ -65,9 +65,9 @@ func (grp *Group) LabelValues(name string, matchers ...*labels.Matcher) ([]strin
 // LabelNames returns all the unique label names present in the block in sorted order.
 // If matchers are specified the returned result set is reduced
 // to label names of metrics matching the matchers.
-func (grp *Group) LabelNames(matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (grp *Group) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
 
-	vals, annots, err := mergeQuerier.LabelNames(matchers...)
+	vals, annots, err := mergeQuerier.LabelNames(ctx, matchers...)
 	return vals, annots, err
 }
