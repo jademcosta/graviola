@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 
-	"github.com/jademcosta/graviola/pkg/graviolalog"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
 )
 
 type GraviolaQuerier struct {
-	logg   *graviolalog.Logger
+	logg   *slog.Logger
 	client *http.Client
 }
 
-func NewGraviolaQuerier(logg *graviolalog.Logger) *GraviolaQuerier {
+func NewGraviolaQuerier(logg *slog.Logger) *GraviolaQuerier {
 	return &GraviolaQuerier{
 		logg:   logg,
 		client: &http.Client{},

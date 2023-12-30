@@ -2,15 +2,14 @@ package storageproxy
 
 import (
 	"context"
-
-	"github.com/jademcosta/graviola/pkg/graviolalog"
+	"log/slog"
 
 	"github.com/prometheus/prometheus/storage"
 )
 
 // TODO: Create constructor
 type GraviolaStorage struct {
-	Logg *graviolalog.Logger
+	Logg *slog.Logger
 }
 
 // Storage

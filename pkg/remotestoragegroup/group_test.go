@@ -2,6 +2,7 @@ package remotestoragegroup_test
 
 import (
 	"context"
+	"log/slog"
 	"math/rand"
 	"reflect"
 	"slices"
@@ -18,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var logg *graviolalog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
+var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 
 func TestCloseIsSentToRemotes(t *testing.T) {
 	mockStorage1 := &RemoteStorageMock{}

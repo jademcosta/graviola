@@ -66,7 +66,7 @@ func main() {
 		&fakes.FakeTSDBAdminStats{}, //Can this be nil?
 		dbDir,
 		enableAdmin,
-		logger,
+		graviolalog.AdaptToGoKitLogger(logger),
 		rulesRetrvFn,
 		remoteReadLimits,
 		remoteReadLimits,

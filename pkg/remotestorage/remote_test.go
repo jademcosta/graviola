@@ -2,6 +2,7 @@ package remotestorage_test
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var logg *graviolalog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
+var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 var frozenTime = time.Now()
 
 const defaultVectorAnswer = `{"status":"success","data":{"resultType":"vector","result":[{"metric":{"__name__":"up","instance":"localhost:9090","job":"prometheus"},"value":[1702174837.986,"1"]}]}}`

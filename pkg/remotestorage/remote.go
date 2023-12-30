@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/domain"
-	"github.com/jademcosta/graviola/pkg/graviolalog"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/promql/parser"
@@ -25,13 +25,13 @@ const DefaultInstantQueryPath = "/api/v1/query"
 const DefaultRangeQueryPath = "/api/v1/query_range"
 
 type RemoteStorage struct {
-	logg   *graviolalog.Logger
+	logg   *slog.Logger
 	URLs   map[string]string
 	client *http.Client
 	now    func() time.Time
 }
 
-func NewRemoteStorage(logg *graviolalog.Logger, conf config.RemoteConfig, now func() time.Time) *RemoteStorage {
+func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() time.Time) *RemoteStorage {
 	//TODO: add WITH on the logger
 	return &RemoteStorage{
 		logg:   logg,
@@ -287,7 +287,7 @@ func (rStorage *RemoteStorage) parseTimeSeriesData(data []byte, sorted bool) *do
 	}
 }
 
-func generateURLs(conf config.RemoteConfig, logg *graviolalog.Logger) map[string]string {
+func generateURLs(conf config.RemoteConfig, logg *slog.Logger) map[string]string {
 	result := make(map[string]string)
 
 	base := conf.Address

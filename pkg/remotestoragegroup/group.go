@@ -2,8 +2,8 @@ package remotestoragegroup
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/jademcosta/graviola/pkg/graviolalog"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup/mergestrategy"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
@@ -15,11 +15,11 @@ type Group struct {
 	remoteStorages    []storage.Querier
 	remoteStoragesLen int
 	// StrategyOnQueryFailure string //TODO: implement me
-	logg            *graviolalog.Logger
+	logg            *slog.Logger
 	seriesSetMerger MergeStrategy
 }
 
-func NewGroup(logg *graviolalog.Logger, name string, remoteStorages []storage.Querier) *Group {
+func NewGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier) *Group {
 	return &Group{
 		Name:              name,
 		remoteStorages:    remoteStorages,

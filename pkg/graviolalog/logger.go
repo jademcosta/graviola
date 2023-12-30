@@ -1,77 +1,57 @@
 package graviolalog
 
 import (
+	"fmt"
+	"log/slog"
+	"os"
+	"strings"
+
 	"github.com/jademcosta/graviola/pkg/config"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-type Logger struct {
-	logger *zap.SugaredLogger
+func NewLogger(conf config.LogConfig) *slog.Logger {
+
+	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: parseLevel(conf.Level),
+	})
+
+	return slog.New(logHandler)
 }
 
-func NewLogger(conf config.LogConfig) *Logger {
-	logLevel, err := zapcore.ParseLevel(conf.Level)
-	if err != nil {
-		panic("error parsing log level: " + err.Error())
-	}
-	zap.NewProductionConfig()
-
-	zapconfig := zap.Config{
-		Level:            zap.NewAtomicLevelAt(logLevel),
-		Development:      false,
-		Encoding:         "json",
-		EncoderConfig:    encoderConfig(),
-		OutputPaths:      []string{"stderr"},
-		ErrorOutputPaths: []string{"stderr"},
-	}
-
-	logger, err := zapconfig.Build()
-	if err != nil {
-		panic("Error initializing logger: " + err.Error())
-	}
-
-	return &Logger{logger: logger.Sugar()}
+type graviolaLogger struct {
+	logg *slog.Logger
 }
 
-func (l *Logger) Log(keyvals ...interface{}) error {
-	l.logger.Infow("", keyvals...)
+func AdaptToGoKitLogger(logg *slog.Logger) *graviolaLogger {
+	return &graviolaLogger{
+		logg: logg,
+	}
+}
+
+func (gravLogger *graviolaLogger) Log(args ...interface{}) error {
+	if len(args) == 0 {
+		return nil
+	}
+
+	if len(args) == 1 {
+		gravLogger.logg.Info(fmt.Sprintf("%v", args[0]))
+		return nil
+	}
+
+	gravLogger.logg.Info(fmt.Sprintf("%v", args[0]), args[1:]...)
 	return nil
 }
 
-func (l *Logger) Debug(msg string, keyvals ...interface{}) {
-	l.logger.Debugw(msg, keyvals...)
-}
+func parseLevel(lvl string) slog.Level {
 
-func (l *Logger) Info(msg string, keyvals ...interface{}) {
-	l.logger.Infow(msg, keyvals...)
-}
-
-func (l *Logger) Warn(msg string, keyvals ...interface{}) {
-	l.logger.Warnw(msg, keyvals...)
-}
-
-func (l *Logger) Error(msg string, keyvals ...interface{}) {
-	l.logger.Errorw(msg, keyvals...)
-}
-
-func (l *Logger) Panic(msg string, keyvals ...interface{}) {
-	l.logger.Panicw(msg, keyvals...)
-}
-
-func encoderConfig() zapcore.EncoderConfig {
-	return zapcore.EncoderConfig{
-		TimeKey:        "ts",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		FunctionKey:    zapcore.OmitKey,
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
+	switch strings.ToUpper(lvl) {
+	case "ERROR":
+		return slog.LevelError
+	case "WARN":
+		return slog.LevelWarn
+	case "DEBUG":
+		return slog.LevelDebug
+	default:
+		return slog.LevelInfo
 	}
 }
