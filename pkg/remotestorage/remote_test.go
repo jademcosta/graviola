@@ -38,7 +38,10 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 		assert.NoError(t, err, "should not error reading body")
 		bodiesInstantQuery = append(bodiesInstantQuery, string(body))
 		bodiesRangeQuery = append(bodiesRangeQuery, "garbage")
-		w.Write([]byte(defaultVectorAnswer))
+		_, err = w.Write([]byte(defaultVectorAnswer))
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	mockRemote.mux.HandleFunc(remotestorage.DefaultRangeQueryPath, func(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +49,10 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 		assert.NoError(t, err, "should not error reading body")
 		bodiesRangeQuery = append(bodiesRangeQuery, string(body))
 		bodiesInstantQuery = append(bodiesInstantQuery, "garbage")
-		w.Write([]byte(defaultVectorAnswer))
+		_, err = w.Write([]byte(defaultVectorAnswer))
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	remoteSrv := httptest.NewServer(mockRemote.mux)
