@@ -32,7 +32,10 @@ func TestParsesMatrixResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 		mux: http.NewServeMux(),
 	}
 	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(*response))
+		_, err := w.Write([]byte(*response))
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	remoteSrv := httptest.NewServer(mockRemote.mux)
@@ -106,7 +109,10 @@ func TestParsesMatrixResponseCorrectlyWithNaNs(t *testing.T) {
 		mux: http.NewServeMux(),
 	}
 	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(response))
+		_, err := w.Write([]byte(response))
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	remoteSrv := httptest.NewServer(mockRemote.mux)
