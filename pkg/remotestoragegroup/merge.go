@@ -91,7 +91,7 @@ func (mq *MergeQuerier) Close() error {
 // It is not safe to use the strings beyond the lifetime of the querier.
 // If matchers are specified the returned result set is reduced
 // to label values of metrics matching the matchers.
-func (mq *MergeQuerier) LabelValues(name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mq *MergeQuerier) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	//TODO: implement me
 	return []string{"myownlabelval"}, map[string]error{}, nil
 }
@@ -100,7 +100,7 @@ func (mq *MergeQuerier) LabelValues(name string, matchers ...*labels.Matcher) ([
 // LabelNames returns all the unique label names present in the block in sorted order.
 // If matchers are specified the returned result set is reduced
 // to label names of metrics matching the matchers.
-func (mq *MergeQuerier) LabelNames(matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mq *MergeQuerier) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	//TODO: implement me
 	return []string{"myownlabelnames"}, map[string]error{}, nil
 }

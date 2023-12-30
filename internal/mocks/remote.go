@@ -1,4 +1,4 @@
-package remotestoragegroup_test
+package mocks
 
 import (
 	"context"
@@ -13,20 +13,20 @@ import (
 type RemoteStorageMock struct {
 	SeriesSet            *domain.GraviolaSeriesSet
 	SelectFn             func(context.Context, bool, *storage.SelectHints, ...*labels.Matcher) storage.SeriesSet
-	calledWithSortSeries []bool
-	calledWithHints      []*storage.SelectHints
-	calledWithMatchers   [][]*labels.Matcher
-	closeCalled          int
-	mu                   sync.Mutex
+	CalledWithSortSeries []bool
+	CalledWithHints      []*storage.SelectHints
+	CalledWithMatchers   [][]*labels.Matcher
+	CloseCalled          int
+	Mu                   sync.Mutex
 }
 
 func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
-	mock.mu.Lock()
-	defer mock.mu.Unlock()
+	mock.Mu.Lock()
+	defer mock.Mu.Unlock()
 
-	mock.calledWithSortSeries = append(mock.calledWithSortSeries, sortSeries)
-	mock.calledWithHints = append(mock.calledWithHints, hints)
-	mock.calledWithMatchers = append(mock.calledWithMatchers, matchers)
+	mock.CalledWithSortSeries = append(mock.CalledWithSortSeries, sortSeries)
+	mock.CalledWithHints = append(mock.CalledWithHints, hints)
+	mock.CalledWithMatchers = append(mock.CalledWithMatchers, matchers)
 
 	if mock.SelectFn != nil {
 		return mock.SelectFn(ctx, sortSeries, hints, matchers...)
@@ -36,7 +36,7 @@ func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hint
 }
 
 func (mock *RemoteStorageMock) Close() error {
-	mock.closeCalled++
+	mock.CloseCalled++
 	return nil
 }
 

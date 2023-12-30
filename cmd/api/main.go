@@ -26,7 +26,7 @@ func main() {
 
 	logger := graviolalog.NewLogger(config.LogConfig{Level: "info"})
 
-	graviolaStorage := &storageproxy.GraviolaStorage{Logg: logger}
+	graviolaStorage := &storageproxy.GraviolaStorage{}
 	graviolaExemplarQueryable := &storageproxy.GraviolaExemplarQueryable{}
 
 	eng := promql.NewEngine(promql.EngineOpts{

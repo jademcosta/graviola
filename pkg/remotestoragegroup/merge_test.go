@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/jademcosta/graviola/internal/mocks"
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/prometheus/common/model"
@@ -42,22 +43,22 @@ func TestCloseIsAlwaysNil(t *testing.T) {
 
 func TestClosePropagatesToQueriers(t *testing.T) {
 
-	querier1 := &RemoteStorageMock{}
-	querier2 := &RemoteStorageMock{}
+	querier1 := &mocks.RemoteStorageMock{}
+	querier2 := &mocks.RemoteStorageMock{}
 
 	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2}, &mockMergeStrategy{})
 
 	assert.Nil(t, sut.Close(), "Close() should always return nil")
 
-	assert.Equal(t, 1, querier1.closeCalled, "should have calledd close on wrapped querier")
-	assert.Equal(t, 1, querier2.closeCalled, "should have calledd close on wrapped querier")
+	assert.Equal(t, 1, querier1.CloseCalled, "should have calledd close on wrapped querier")
+	assert.Equal(t, 1, querier2.CloseCalled, "should have calledd close on wrapped querier")
 }
 
 func TestSelectPropagatesToQueriers(t *testing.T) {
 
-	querier1 := &RemoteStorageMock{SeriesSet: &domain.GraviolaSeriesSet{}}
-	querier2 := &RemoteStorageMock{SeriesSet: &domain.GraviolaSeriesSet{}}
-	querier3 := &RemoteStorageMock{SeriesSet: &domain.GraviolaSeriesSet{}}
+	querier1 := &mocks.RemoteStorageMock{SeriesSet: &domain.GraviolaSeriesSet{}}
+	querier2 := &mocks.RemoteStorageMock{SeriesSet: &domain.GraviolaSeriesSet{}}
+	querier3 := &mocks.RemoteStorageMock{SeriesSet: &domain.GraviolaSeriesSet{}}
 
 	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2, querier3}, &mockMergeStrategy{})
 	matchers := []*labels.Matcher{{Type: labels.MatchEqual, Name: "somename", Value: "someValue"}}
@@ -65,17 +66,17 @@ func TestSelectPropagatesToQueriers(t *testing.T) {
 
 	sut.Select(context.Background(), true, hints, matchers...)
 
-	assert.Equal(t, []bool{true}, querier1.calledWithSortSeries, "should have called with the same sortSeries value")
-	assert.Equal(t, []bool{true}, querier2.calledWithSortSeries, "should have called with the same sortSeries value")
-	assert.Equal(t, []bool{true}, querier3.calledWithSortSeries, "should have called with the same sortSeries value")
+	assert.Equal(t, []bool{true}, querier1.CalledWithSortSeries, "should have called with the same sortSeries value")
+	assert.Equal(t, []bool{true}, querier2.CalledWithSortSeries, "should have called with the same sortSeries value")
+	assert.Equal(t, []bool{true}, querier3.CalledWithSortSeries, "should have called with the same sortSeries value")
 
-	assert.Equal(t, [][]*labels.Matcher{matchers}, querier1.calledWithMatchers, "should have called with the same matchers value")
-	assert.Equal(t, [][]*labels.Matcher{matchers}, querier2.calledWithMatchers, "should have called with the same matchers value")
-	assert.Equal(t, [][]*labels.Matcher{matchers}, querier3.calledWithMatchers, "should have called with the same matchers value")
+	assert.Equal(t, [][]*labels.Matcher{matchers}, querier1.CalledWithMatchers, "should have called with the same matchers value")
+	assert.Equal(t, [][]*labels.Matcher{matchers}, querier2.CalledWithMatchers, "should have called with the same matchers value")
+	assert.Equal(t, [][]*labels.Matcher{matchers}, querier3.CalledWithMatchers, "should have called with the same matchers value")
 
-	assert.Equal(t, []*storage.SelectHints{hints}, querier1.calledWithHints, "should have called with the same hints value")
-	assert.Equal(t, []*storage.SelectHints{hints}, querier2.calledWithHints, "should have called with the same hints value")
-	assert.Equal(t, []*storage.SelectHints{hints}, querier3.calledWithHints, "should have called with the same hints value")
+	assert.Equal(t, []*storage.SelectHints{hints}, querier1.CalledWithHints, "should have called with the same hints value")
+	assert.Equal(t, []*storage.SelectHints{hints}, querier2.CalledWithHints, "should have called with the same hints value")
+	assert.Equal(t, []*storage.SelectHints{hints}, querier3.CalledWithHints, "should have called with the same hints value")
 }
 
 func TestCallsTheMergeStrategyWithReturnOfWrappedQueriers(t *testing.T) {
@@ -84,19 +85,19 @@ func TestCallsTheMergeStrategyWithReturnOfWrappedQueriers(t *testing.T) {
 		{Lbs: labels.FromStrings("key1", "val1"),
 			Datapoints: []model.SamplePair{{Timestamp: 12345, Value: 1.1}}},
 	}}
-	querier1 := &RemoteStorageMock{SeriesSet: seriesSet1}
+	querier1 := &mocks.RemoteStorageMock{SeriesSet: seriesSet1}
 
 	seriesSet2 := &domain.GraviolaSeriesSet{Series: []*domain.GraviolaSeries{
 		{Lbs: labels.FromStrings("key1", "val1"),
 			Datapoints: []model.SamplePair{{Timestamp: 123456, Value: 12.1}}},
 	}}
-	querier2 := &RemoteStorageMock{SeriesSet: seriesSet2}
+	querier2 := &mocks.RemoteStorageMock{SeriesSet: seriesSet2}
 
 	seriesSet3 := &domain.GraviolaSeriesSet{Series: []*domain.GraviolaSeries{
 		{Lbs: labels.FromStrings("key1", "val1"),
 			Datapoints: []model.SamplePair{{Timestamp: 1234567, Value: 32.3}}},
 	}}
-	querier3 := &RemoteStorageMock{SeriesSet: seriesSet3}
+	querier3 := &mocks.RemoteStorageMock{SeriesSet: seriesSet3}
 
 	strategy := &mockMergeStrategy{}
 	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2, querier3}, strategy)
@@ -112,11 +113,11 @@ func TestCallsTheMergeStrategyWithReturnOfWrappedQueriers(t *testing.T) {
 
 func TestReturnsWhateverTheMergeStrategyReturns(t *testing.T) {
 	emptySeriesSet := &domain.GraviolaSeriesSet{}
-	querier1 := &RemoteStorageMock{
+	querier1 := &mocks.RemoteStorageMock{
 		SeriesSet: emptySeriesSet,
 	}
 
-	querier2 := &RemoteStorageMock{
+	querier2 := &mocks.RemoteStorageMock{
 		SeriesSet: emptySeriesSet,
 	}
 
@@ -133,7 +134,7 @@ func TestReturnsWhateverTheMergeStrategyReturns(t *testing.T) {
 
 func TestWhenOnlyOneQuerierExistDoesNotCallMerge(t *testing.T) {
 	emptySeriesSet := &domain.GraviolaSeriesSet{}
-	querier1 := &RemoteStorageMock{
+	querier1 := &mocks.RemoteStorageMock{
 		SeriesSet: emptySeriesSet,
 	}
 

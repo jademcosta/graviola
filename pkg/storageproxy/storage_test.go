@@ -1,4 +1,4 @@
-package remotestoragegroup_test
+package storageproxy_test
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
-	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
+	"github.com/jademcosta/graviola/pkg/storageproxy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
@@ -22,15 +22,16 @@ import (
 
 var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 
-func TestCloseIsSentToRemotes(t *testing.T) {
-	mockStorage1 := &mocks.RemoteStorageMock{}
-	mockStorage2 := &mocks.RemoteStorageMock{}
+func TestCloseIsCalledOnWrappedGroup(t *testing.T) {
+	mock1 := &mocks.RemoteStorageMock{}
+	mock2 := &mocks.RemoteStorageMock{}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mock1, mock2})
+
 	sut.Close()
 
-	assert.Equal(t, 1, mockStorage1.CloseCalled, "should have called close on wrapper remotes")
-	assert.Equal(t, 1, mockStorage2.CloseCalled, "should have called close on wrapper remotes")
+	assert.Equal(t, 1, mock1.CloseCalled, "should have called close on underlying queriers")
+	assert.Equal(t, 1, mock2.CloseCalled, "should have called close on underlying queriers")
 }
 
 func TestSelect(t *testing.T) {
@@ -52,7 +53,10 @@ func TestSelect(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+
+	querier, err := sut.Querier(0, 6000)
+	assert.NoError(t, err, "should not return error")
 
 	ctx := context.Background()
 	sorted := true
@@ -66,7 +70,7 @@ func TestSelect(t *testing.T) {
 			Value: "somevalforlabel2"},
 	}
 
-	mergedSeries := sut.Select(ctx, sorted, hints, matchers...)
+	mergedSeries := querier.Select(ctx, sorted, hints, matchers...)
 	graviolaSeriesSet, ok := mergedSeries.(*domain.GraviolaSeriesSet)
 	assert.True(t, ok, "should be a GraviolaSeriesSet")
 
@@ -112,7 +116,10 @@ func TestConcurrentSelects(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+
+	querier, err := sut.Querier(0, 6000)
+	assert.NoError(t, err, "should not return error")
 
 	ctx := context.Background()
 	sorted := true
@@ -137,7 +144,7 @@ func TestConcurrentSelects(t *testing.T) {
 
 	for i := 0; i < goroutinesTotal; i++ {
 		go func() {
-			results <- sut.Select(ctx, sorted, hints, matchers...)
+			results <- querier.Select(ctx, sorted, hints, matchers...)
 			wg.Done()
 		}()
 	}
@@ -231,7 +238,10 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+
+	querier, err := sut.Querier(0, 6000)
+	assert.NoError(t, err, "should not return error")
 
 	ctx := context.Background()
 	sorted := true
@@ -256,7 +266,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 
 	for i := 0; i < goroutinesTotal; i++ {
 		go func() {
-			results <- sut.Select(ctx, sorted, hints, matchers...)
+			results <- querier.Select(ctx, sorted, hints, matchers...)
 			wg.Done()
 		}()
 	}

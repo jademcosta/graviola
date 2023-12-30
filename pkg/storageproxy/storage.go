@@ -4,39 +4,43 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/prometheus/prometheus/storage"
 )
 
-// TODO: Create constructor
+// GraviolaStorage is a wrapper around a group of groups
 type GraviolaStorage struct {
-	Logg *slog.Logger
+	logg      *slog.Logger
+	rootGroup *remotestoragegroup.Group
+}
+
+func NewGraviolaStorage(logg *slog.Logger, groups []storage.Querier) *GraviolaStorage {
+	return &GraviolaStorage{
+		logg:      logg,
+		rootGroup: remotestoragegroup.NewGroup(logg, "root", groups),
+	}
 }
 
 // Storage
-func (sp *GraviolaStorage) Close() error {
-	sp.Logg.Info("GraviolaStorage: Close")
-	return nil
+func (gravStorage *GraviolaStorage) Close() error {
+	return gravStorage.rootGroup.Close()
 }
 
-func (sp *GraviolaStorage) StartTime() (int64, error) {
-	sp.Logg.Info("GraviolaStorage: StartTime")
-	return 0, nil
+func (gravStorage *GraviolaStorage) StartTime() (int64, error) {
+	return 0, nil //TODO: implement me
 }
 
 // Appendable
-func (sp *GraviolaStorage) Appender(ctx context.Context) storage.Appender {
-	sp.Logg.Info("GraviolaStorage: Appender")
-	return nil
+func (gravStorage *GraviolaStorage) Appender(ctx context.Context) storage.Appender {
+	return nil //TODO: implement me
 }
 
 // Queryable
-func (sp *GraviolaStorage) Querier(mint, maxt int64) (storage.Querier, error) {
-	sp.Logg.Info("GraviolaStorage: Querier")
-	return NewGraviolaQuerier(sp.Logg), nil
+func (gravStorage *GraviolaStorage) Querier(mint, maxt int64) (storage.Querier, error) {
+	return gravStorage.rootGroup, nil
 }
 
 // ChunkQueryable
-func (sp *GraviolaStorage) ChunkQuerier(mint, maxt int64) (storage.ChunkQuerier, error) {
-	sp.Logg.Info("GraviolaStorage: ChunkQuerier")
-	return nil, nil
+func (gravStorage *GraviolaStorage) ChunkQuerier(mint, maxt int64) (storage.ChunkQuerier, error) {
+	return nil, nil //TODO: implement me
 }
