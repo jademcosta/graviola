@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestValidate(t *testing.T) {
+func TestRemoteValidate(t *testing.T) {
 	sut := config.RemoteConfig{}
 	err := sut.IsValid()
 	assert.Error(t, err, "should return error when address is empty")

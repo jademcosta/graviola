@@ -42,7 +42,7 @@ func TestAcceptSpecificValues(t *testing.T) {
 	}
 }
 
-func TestDefaultValues(t *testing.T) {
+func TestLogDefaultValues(t *testing.T) {
 	sut := config.LogConfig{}
 	newSut := sut.FillDefaults()
 
