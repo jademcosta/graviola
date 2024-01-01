@@ -8,7 +8,7 @@ import (
 
 const StrategyFailAll = "fail_all"
 const StrategyPartialResponse = "partial_response"
-const DefaultStrategy = StrategyFailAll
+const DefaultOnFailStrategy = StrategyFailAll
 
 type GroupsConfig struct {
 	Name                string           `yaml:"name"`
@@ -19,7 +19,7 @@ type GroupsConfig struct {
 
 func (gc GroupsConfig) FillDefaults() GroupsConfig {
 	if gc.OnQueryFailStrategy == "" {
-		gc.OnQueryFailStrategy = DefaultStrategy
+		gc.OnQueryFailStrategy = DefaultOnFailStrategy
 	}
 	return gc
 }

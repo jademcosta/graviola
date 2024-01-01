@@ -41,6 +41,6 @@ func TestOnQueryFailDefaultValues(t *testing.T) {
 	sut := config.GroupsConfig{}
 	newSut := sut.FillDefaults()
 
-	assert.Equal(t, config.DefaultStrategy, newSut.OnQueryFailStrategy,
-		fmt.Sprintf("query failure strategy should be set to %s if the provided value is empty", config.DefaultStrategy))
+	assert.Equal(t, config.DefaultOnFailStrategy, newSut.OnQueryFailStrategy,
+		fmt.Sprintf("query failure strategy should be set to %s if the provided value is empty", config.DefaultOnFailStrategy))
 }
