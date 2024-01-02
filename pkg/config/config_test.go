@@ -5,6 +5,7 @@ import (
 
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 var testConfig string = `
@@ -114,4 +115,68 @@ func TestParse(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, result, "should have parsed all fields")
+}
+
+func TestValidation(t *testing.T) {
+	inputConf := config.GraviolaConfig{
+		StoragesConf: config.StoragesConfig{
+			Groups: []config.GroupsConfig{
+				{
+					Name:                "group 1 name",
+					OnQueryFailStrategy: "fail_all",
+					TimeWindow: config.TimeWindowConfig{
+						Start: "now-6h",
+						End:   "now",
+					},
+					Servers: []config.RemoteConfig{
+						{
+							Name:       "my server 1",
+							Address:    "https://localhost:9090",
+							PathPrefix: "",
+						},
+					},
+				},
+				{
+					Name:                "group 2 name",
+					OnQueryFailStrategy: "partial_response",
+					TimeWindow: config.TimeWindowConfig{
+						Start: "now-16h",
+						End:   "now-1h",
+					},
+					Servers: []config.RemoteConfig{
+						{
+							Name:       "my server 11",
+							Address:    "https://localhost:9090",
+							PathPrefix: "/here",
+						},
+						{
+							Name:       "my server 12",
+							Address:    "https://localhost:9092",
+							PathPrefix: "/hello/api/",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	confData, err := yaml.Marshal(inputConf)
+	if err != nil {
+		panic(err)
+	}
+
+	sut, err := config.Parse(confData)
+	assert.NoError(t, err, "should result in NO error if config is valid")
+
+	err = sut.IsValid()
+	assert.Error(t, err, "should ask wrapped children configs if they are valid")
+
+	sut = sut.FillDefaults()
+
+	err = sut.IsValid()
+	assert.NoError(t, err, "should be valid")
+
+	sut.StoragesConf.Groups[0].Name = sut.StoragesConf.Groups[1].Name
+	err = sut.IsValid()
+	assert.Error(t, err, "should NOT be valid")
 }
