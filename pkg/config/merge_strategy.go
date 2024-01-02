@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-const DefaultStrategyType = "keep_biggest"
+const DefaultMergeStrategyType = "keep_biggest"
 
 type MergeStrategyConfig struct {
 	Type string `yaml:"type"`
@@ -14,7 +14,7 @@ type MergeStrategyConfig struct {
 
 func (mergeStratConf MergeStrategyConfig) FillDefaults() MergeStrategyConfig {
 	if mergeStratConf.Type == "" {
-		mergeStratConf.Type = DefaultStrategyType
+		mergeStratConf.Type = DefaultMergeStrategyType
 	}
 
 	return mergeStratConf

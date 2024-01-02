@@ -32,7 +32,7 @@ func TestStoragesFillDefaults(t *testing.T) {
 	sut := config.StoragesConfig{}
 
 	sut = sut.FillDefaults()
-	assert.Equal(t, config.DefaultStrategyType, sut.MergeConf.Type, "should have called FillDefaults on children configs")
+	assert.Equal(t, config.DefaultMergeStrategyType, sut.MergeConf.Type, "should have called FillDefaults on children configs")
 
 	sut = config.StoragesConfig{Groups: []config.GroupsConfig{{}, {}}}
 	sut = sut.FillDefaults()

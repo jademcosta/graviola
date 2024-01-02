@@ -180,3 +180,49 @@ func TestValidation(t *testing.T) {
 	err = sut.IsValid()
 	assert.Error(t, err, "should NOT be valid")
 }
+
+func TestFillDefaultsCallsItOnChildren(t *testing.T) {
+	inputConf := config.GraviolaConfig{
+		StoragesConf: config.StoragesConfig{
+			Groups: []config.GroupsConfig{
+				{
+					Name: "group 1 name",
+					Servers: []config.RemoteConfig{
+						{
+							Name:    "my server 1",
+							Address: "https://localhost:9090",
+						},
+					},
+				},
+				{
+					Name: "group 2 name",
+					Servers: []config.RemoteConfig{
+						{
+							Name:       "my server 11",
+							Address:    "https://localhost:9090",
+							PathPrefix: "/here",
+						},
+						{
+							Name:       "my server 12",
+							Address:    "https://localhost:9092",
+							PathPrefix: "/hello/api/",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	confData, err := yaml.Marshal(inputConf)
+	if err != nil {
+		panic(err)
+	}
+
+	sut, err := config.Parse(confData)
+	assert.NoError(t, err, "should result in NO error if config is valid")
+
+	sut = sut.FillDefaults()
+	assert.Equal(t, config.DefaultPort, sut.ApiConf.Port, "should have filled API defaults")
+	assert.Equal(t, config.DefaultLogLevel, sut.LogConf.Level, "should have filled Log defaults")
+	assert.Equal(t, config.DefaultMergeStrategyType, sut.StoragesConf.MergeConf.Type, "should have filled storage defaults default")
+}
