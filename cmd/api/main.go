@@ -36,6 +36,13 @@ func main() {
 		panic(fmt.Errorf("error parsing config: %w", err))
 	}
 
+	conf = conf.FillDefaults()
+
+	err = conf.IsValid()
+	if err != nil {
+		panic(fmt.Errorf("error validating config: %w", err))
+	}
+
 	app := application.NewApp(conf)
 	app.Start()
 }

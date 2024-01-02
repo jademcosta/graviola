@@ -40,6 +40,11 @@ func (apiConf ApiConfig) IsValid() error {
 	return nil
 }
 
-func (apiConf ApiConfig) TimeoutDuration() (time.Duration, error) {
-	return ParseDuration(apiConf.Timeout)
+func (apiConf ApiConfig) TimeoutDuration() time.Duration {
+	parsed, err := ParseDuration(apiConf.Timeout)
+	if err != nil {
+		panic(err)
+	}
+
+	return parsed
 }
