@@ -1,6 +1,7 @@
 package remotestorage_test
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -147,7 +148,7 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 
 	for _, tc := range testCases {
 		response = &tc.answer
-		result := sut.Select(true, &defaultHints, defaultMatchers...)
+		result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
 		assert.Lenf(t, result.(*domain.GraviolaSeriesSet).Series, tc.seriesCount, "should have %d series", tc.seriesCount)
 		assert.Equal(t, tc.expectedResult, result, "result should be correct")
 	}
@@ -175,7 +176,7 @@ func TestParsesVectorResponseCorrectlyWithNaN(t *testing.T) {
 
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
 
-	result := sut.Select(true, &defaultHints, defaultMatchers...)
+	result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
 	resultParsed := result.(*domain.GraviolaSeriesSet)
 
 	assert.Lenf(t, resultParsed.Series, 1, "should have 1 serie")

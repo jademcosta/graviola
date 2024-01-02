@@ -1,6 +1,7 @@
 package remotestorage_test
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -95,7 +96,7 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
 
 	for idx, tc := range testCases {
-		result := sut.Select(true, tc.hints, tc.matchers...)
+		result := sut.Select(context.Background(), true, tc.hints, tc.matchers...)
 		assert.NotNil(t, result, "result should not be nil")
 		time.Sleep(1 * time.Millisecond)
 		var sentPayload string

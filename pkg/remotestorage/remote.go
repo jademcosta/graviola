@@ -1,6 +1,7 @@
 package remotestorage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,8 +47,8 @@ func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() ti
 // Select returns a set of series that matches the given label matchers.
 // Caller can specify if it requires returned series to be sorted. Prefer not requiring sorting for better performance.
 // It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
-func (rStorage *RemoteStorage) Select(sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
-
+func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
+	//TODO: use context
 	// now := rStorage.now().Unix()
 
 	promQLQuery, err := ToPromQLQuery(matchers)
@@ -179,7 +180,7 @@ func (rStorage *RemoteStorage) Close() error {
 //	// It is not safe to use the strings beyond the lifetime of the querier.
 //	// If matchers are specified the returned result set is reduced
 //	// to label values of metrics matching the matchers.
-func (rStorage *RemoteStorage) LabelValues(name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (rStorage *RemoteStorage) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	//TODO: implement me
 	return []string{"myownlabelval"}, map[string]error{}, nil
 }
@@ -189,7 +190,7 @@ func (rStorage *RemoteStorage) LabelValues(name string, matchers ...*labels.Matc
 //	// LabelNames returns all the unique label names present in the block in sorted order.
 //	// If matchers are specified the returned result set is reduced
 //	// to label names of metrics matching the matchers.
-func (rStorage *RemoteStorage) LabelNames(matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (rStorage *RemoteStorage) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	//TODO: implement me
 	return []string{"myownlabelnames"}, map[string]error{}, nil
 }
