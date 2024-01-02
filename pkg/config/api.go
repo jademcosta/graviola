@@ -32,7 +32,7 @@ func (apiConf ApiConfig) IsValid() error {
 		return fmt.Errorf("port cannot be zero")
 	}
 
-	_, err := parseDuration(apiConf.Timeout)
+	_, err := ParseDuration(apiConf.Timeout)
 	if err != nil {
 		return fmt.Errorf("error validating api config: %w", err)
 	}
@@ -41,5 +41,5 @@ func (apiConf ApiConfig) IsValid() error {
 }
 
 func (apiConf ApiConfig) TimeoutDuration() (time.Duration, error) {
-	return parseDuration(apiConf.Timeout)
+	return ParseDuration(apiConf.Timeout)
 }

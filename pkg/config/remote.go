@@ -6,9 +6,10 @@ import (
 )
 
 type RemoteConfig struct {
-	Name       string `yaml:"name"`
-	Address    string `yaml:"address"`
-	PathPrefix string `yaml:"path_prefix"`
+	Name           string           `yaml:"name"`
+	Address        string           `yaml:"address"`
+	PathPrefix     string           `yaml:"path_prefix"`
+	TimeWindowConf TimeWindowConfig `yaml:"time_window"`
 }
 
 func (sc RemoteConfig) FillDefaults() RemoteConfig {
