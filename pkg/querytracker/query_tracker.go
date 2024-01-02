@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// FIXME: add tests
 type GraviolaQueryTracker struct {
 	mu                  sync.Mutex
 	concurrencyLimmiter chan struct{}

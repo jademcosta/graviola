@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/prometheus/storage"
 )
 
+// TODO: implement me
 type GraviolaExemplarQueryable struct {
 }
 

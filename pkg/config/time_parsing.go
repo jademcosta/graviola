@@ -40,7 +40,7 @@ func ParseDuration(durationToParse string) (time.Duration, error) {
 		return 0, fmt.Errorf("value %s is not a duration", durationToParse)
 	}
 
-	var unit time.Duration = time.Minute
+	var unit time.Duration
 	var justDigits string
 	if strings.HasSuffix(durationToParse, "ms") {
 		unit = time.Millisecond
