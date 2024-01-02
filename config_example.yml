@@ -1,5 +1,8 @@
 api:
   port: 8091
+  # [optional] default is 1 minute (1m). Defines after how much time the query is aborted and
+  # an error is returned.
+  timeout: 1m
 
 storages:
   # [optional] default is 30s. Which time window will be used to deduplicate time series values.
