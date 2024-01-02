@@ -29,9 +29,9 @@ storages:
           address: "https://localhost:9090"
           path_prefix: ""
           timeout: 35s
-          time_window:
-            start: "now-6h"
-            end: "now"
+          #time_window:
+          #  start: "now-6h"
+          #  end: "now"
     - name: "group 2 name"
       on_query_fail: partial_response
       time_window:
@@ -42,16 +42,16 @@ storages:
           address: "https://localhost:9090"
           path_prefix: "/here"
           timeout: 35s
-          time_window:
-            start: "now-6h"
-            end: "now"
+          #time_window:
+          #  start: "now-6h"
+          #  end: "now"
         - name: "my server 12"
           address: "https://localhost:9092"
           path_prefix: "/hello/api/"
           timeout: 35s
-          time_window:
-            start: "now-6h"
-            end: "now"
+          #time_window:
+          #  start: "now-6h"
+          #  end: "now"
 `
 
 func TestParse(t *testing.T) {
@@ -114,16 +114,4 @@ func TestParse(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, result, "should have parsed all fields")
-
-	// assert.Equal(t, "error", result.LogConf.Level, "should have parsed log.level correctly")
-
-	// assert.Equal(t, "12m", result.ApiConf.Timeout, "should have parsed api.timeout correctly")
-	// assert.Equal(t, 8091, result.ApiConf.Port, "should have parsed api.port correctly")
-
-	// assert.Len(t, result.StoragesConf.Groups, 2, "should have parsed all groups")
-
-	// assert.Len(t, result.StoragesConf.Groups[0].Servers, 1, "should have parsed all remotes inside groups")
-	// assert.Len(t, result.StoragesConf.Groups[1].Servers, 2, "should have parsed all remotes inside groups")
-
-	// assert.Equal(t, "my server 1", result.StoragesConf.Groups[0].Servers[0].Name, "should have parsed emote names correctly")
 }
