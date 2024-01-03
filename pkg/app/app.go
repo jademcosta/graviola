@@ -1,4 +1,4 @@
-package application
+package app
 
 import (
 	"context"
@@ -36,7 +36,7 @@ type App struct {
 	api     *api_v1.API
 	logger  *slog.Logger
 	metricz *prometheus.Registry
-	srv     *http.Server
+	Srv     *http.Server
 	conf    config.GraviolaConfig // TODO: this is needed due to the api server configs
 }
 
@@ -112,7 +112,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 		api:     apiV1,
 		logger:  logger,
 		metricz: metricRegistry,
-		srv:     srv,
+		Srv:     srv,
 		conf:    conf,
 	}
 }
@@ -128,7 +128,7 @@ func (app *App) Start() {
 	}()
 
 	app.logger.Info("Starting server...")
-	fmt.Println(fmt.Errorf("on serving HTTP: %w", app.srv.ListenAndServe()))
+	app.logger.Error("listenandserve exited", "error", fmt.Errorf("on serving HTTP: %w", app.Srv.ListenAndServe()))
 }
 
 func (app *App) Stop() {
@@ -137,7 +137,7 @@ func (app *App) Stop() {
 
 	app.logger.Info("shutting down")
 
-	err := app.srv.Shutdown(ctx)
+	err := app.Srv.Shutdown(ctx)
 	if err != nil {
 		app.logger.Error("error when sutting down", "error", err)
 	}

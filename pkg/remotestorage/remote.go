@@ -67,7 +67,8 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 	var urlForQuery string
 	if hints.End == hints.Start {
 		urlForQuery = rStorage.URLs["instant_query"]
-	} else {
+	} else { //FIXME: there's a legitimate case for when these are equal and != 0.
+		// It is when user wants to query a instant in the past.
 		params.Set("start", fmt.Sprintf("%d", hints.Start))
 		params.Set("end", fmt.Sprintf("%d", hints.End))
 		if hints.Step != 0 {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jademcosta/graviola/pkg/application"
+	"github.com/jademcosta/graviola/pkg/app"
 	"github.com/jademcosta/graviola/pkg/config"
 )
 
@@ -43,6 +43,6 @@ func main() {
 		panic(fmt.Errorf("error validating config: %w", err))
 	}
 
-	app := application.NewApp(conf)
+	app := app.NewApp(conf)
 	app.Start()
 }
