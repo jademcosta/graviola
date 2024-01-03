@@ -21,6 +21,10 @@ func (sc RemoteConfig) IsValid() error {
 		return fmt.Errorf("address of server cannot be nil")
 	}
 
+	if sc.Name == "" {
+		return fmt.Errorf("name of server cannot be nil")
+	}
+
 	rex, _ := regexp.Compile("^https?://.+$")
 
 	if !rex.Match([]byte(sc.Address)) {
