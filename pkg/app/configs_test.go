@@ -5,6 +5,9 @@ api:
   port: 8091
   timeout: 1m
 
+log:
+  level: error
+
 storages:
   merge_strategy:
     type: keep_biggest
