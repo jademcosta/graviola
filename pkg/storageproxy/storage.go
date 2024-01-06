@@ -27,11 +27,13 @@ func (gravStorage *GraviolaStorage) Close() error {
 }
 
 func (gravStorage *GraviolaStorage) StartTime() (int64, error) {
+	panic("should not call StartTime")
 	return 0, nil //TODO: implement me
 }
 
 // Appendable
 func (gravStorage *GraviolaStorage) Appender(ctx context.Context) storage.Appender {
+	panic("should not call Appender")
 	return nil //TODO: implement me
 }
 
@@ -42,5 +44,6 @@ func (gravStorage *GraviolaStorage) Querier(mint, maxt int64) (storage.Querier, 
 
 // ChunkQueryable
 func (gravStorage *GraviolaStorage) ChunkQuerier(mint, maxt int64) (storage.ChunkQuerier, error) {
+	panic("should not call ChunkQuerier")
 	return nil, nil //TODO: implement me
 }

@@ -24,7 +24,7 @@ func NewGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier) 
 		Name:              name,
 		remoteStorages:    remoteStorages,
 		remoteStoragesLen: len(remoteStorages),
-		logg:              logg,
+		logg:              logg.With("name", name, "component", "group"),
 		seriesSetMerger:   mergestrategy.NewKeepBiggestMergeStrategy(), //FIXME: create a factory that uses the config
 	}
 }

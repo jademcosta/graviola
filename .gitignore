@@ -15,6 +15,6 @@
 go.work
 
 profile.cov
-config.yaml
+config.yml
 secrets
 jiboia

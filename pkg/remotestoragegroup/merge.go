@@ -66,7 +66,8 @@ func (mq *MergeQuerier) Select(ctx context.Context, sortSeries bool, hints *stor
 	}
 
 	//TODO: check if context is cancelled
-	return mq.seriesSetMerger.Merge(seriesSets)
+	response := mq.seriesSetMerger.Merge(seriesSets)
+	return response
 }
 
 // LabelQuerier

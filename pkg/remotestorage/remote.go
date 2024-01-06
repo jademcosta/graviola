@@ -24,6 +24,7 @@ import (
 
 const DefaultInstantQueryPath = "/api/v1/query"
 const DefaultRangeQueryPath = "/api/v1/query_range"
+const DefaultStep = 15000 //15 seconds
 
 type RemoteStorage struct {
 	logg   *slog.Logger
@@ -35,7 +36,7 @@ type RemoteStorage struct {
 func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() time.Time) *RemoteStorage {
 	//TODO: add WITH on the logger
 	return &RemoteStorage{
-		logg:   logg,
+		logg:   logg.With("name", conf.Name, "component", "remote"),
 		URLs:   generateURLs(conf, logg),
 		client: &http.Client{}, //TODO: allow to config this
 		now:    now,
@@ -49,7 +50,6 @@ func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() ti
 // It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
 func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
 	//TODO: use context
-	// now := rStorage.now().Unix()
 
 	promQLQuery, err := ToPromQLQuery(matchers)
 	if err != nil {
@@ -65,15 +65,21 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 	params.Set("query", *promQLQuery)
 
 	var urlForQuery string
-	if hints.End == hints.Start {
+	if (hints.End == hints.Start) && (hints.End == 0) {
 		urlForQuery = rStorage.URLs["instant_query"]
-	} else { //FIXME: there's a legitimate case for when these are equal and != 0.
-		// It is when user wants to query a instant in the past.
+
+	} else if hints.End == hints.Start {
+		urlForQuery = rStorage.URLs["instant_query"]
 		params.Set("start", fmt.Sprintf("%d", hints.Start))
 		params.Set("end", fmt.Sprintf("%d", hints.End))
-		if hints.Step != 0 {
-			params.Set("step", fmt.Sprintf("%d", hints.Step))
-		} //TODO: allow a default step to be set, and define one default if it is not set
+		params.Set("step", fmt.Sprintf("%d", hints.Step))
+	} else {
+		params.Set("start", fmt.Sprintf("%d", hints.Start))
+		params.Set("end", fmt.Sprintf("%d", hints.End))
+		params.Set("step", fmt.Sprintf("%d", hints.Step))
+		if hints.Step == 0 {
+			params.Set("step", fmt.Sprintf("%d", DefaultStep))
+		} //TODO: allow a default step to be set by configs
 
 		urlForQuery = rStorage.URLs["range_query"]
 	}
@@ -89,6 +95,9 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
+		"body", params.Encode(), "method", req.Method)
 
 	resp, err := rStorage.client.Do(req)
 	if err != nil {
@@ -111,9 +120,14 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		}
 	}
 
+	//FIXME: tá retornando vazia a response :(
+
+	rStorage.logg.Debug("remote response", "body", string(data), "headers", resp.Header)
+
 	if !responseSuccessful(resp.StatusCode) {
 		e := fmt.Errorf("server answered with non-succesful status code %d", resp.StatusCode)
 		rStorage.logg.Error("non-successful status code", "error", e)
+
 		return &domain.GraviolaSeriesSet{
 			Erro:   e,
 			Annots: map[string]error{"remote_storage": e},

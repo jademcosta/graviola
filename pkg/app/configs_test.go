@@ -3,7 +3,7 @@ package app_test
 const configOneGroupWithOneRemote = `
 api:
   port: 8091
-  timeout: 1m
+  timeout: 3m
 
 log:
   level: error

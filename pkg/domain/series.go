@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/prometheus/common/model"
@@ -36,7 +35,6 @@ type GraviolaIterator struct {
 }
 
 func newGraviolaIterator(series *GraviolaSeries) chunkenc.Iterator {
-	fmt.Println("newGraviolaIterator CALLED")
 	return &GraviolaIterator{
 		cur:        -1,
 		curValType: chunkenc.ValNone,

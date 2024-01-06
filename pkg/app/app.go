@@ -7,23 +7,20 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"syscall"
 	"time"
 
 	grafanaregexp "github.com/grafana/regexp"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
-	"github.com/jademcosta/graviola/pkg/querytracker"
+	"github.com/jademcosta/graviola/pkg/queryengine"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/jademcosta/graviola/pkg/storageproxy"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
-	"github.com/prometheus/prometheus/promql"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/web"
 	api_v1 "github.com/prometheus/prometheus/web/api/v1"
@@ -44,13 +41,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	logger := graviolalog.NewLogger(conf.LogConf)
 	metricRegistry := prometheus.NewRegistry()
 
-	eng := promql.NewEngine(promql.EngineOpts{
-		Timeout:            conf.ApiConf.TimeoutDuration(),
-		MaxSamples:         10000, //TODO: add config for all these
-		LookbackDelta:      5 * time.Minute,
-		EnableAtModifier:   true,
-		ActiveQueryTracker: querytracker.NewGraviolaQueryTracker(2),
-	})
+	eng := queryengine.NewGraviolaQueryEngine(logger, metricRegistry, conf)
 
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, initializeGroups(logger, conf.StoragesConf.Groups))
 
@@ -71,8 +62,8 @@ func NewApp(conf config.GraviolaConfig) *App {
 		false,                      // enableAdmin bool
 		graviolalog.AdaptToGoKitLogger(logger),
 		nil,                             // func(context.Context) RulesRetriever
-		1,                               //TODO: allow config (remoteReadSampleLimit)
-		1,                               //TODO: allow config (remoteReadConcurrencyLimit)
+		100,                             //TODO: allow config (remoteReadSampleLimit)
+		10,                              //TODO: allow config (remoteReadConcurrencyLimit)
 		1024,                            //TODO: allow config (remoteReadMaxBytesInFrame) (currently 1KB)
 		false,                           // isAgent bool - If this is set to true the query endpoints will not work
 		grafanaregexp.MustCompile(".*"), // corsOrigin *regexp.Regexp,
@@ -94,13 +85,14 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	router := route.New()
 
-	metricRegistry.MustRegister(
-		collectors.NewBuildInfoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		collectors.NewGoCollector(
-			collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
-		),
-	)
+	// TODO: is this needed?
+	// metricRegistry.MustRegister(
+	// 	collectors.NewBuildInfoCollector(),
+	// 	collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	// 	collectors.NewGoCollector(
+	// 		collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
+	// 	),
+	// )
 	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
 
 	router = router.WithPrefix("/api/v1")

@@ -33,7 +33,6 @@ func (tracker *GraviolaQueryTracker) GetMaxConcurrent() int {
 func (tracker *GraviolaQueryTracker) Insert(ctx context.Context, query string) (int, error) {
 	select {
 	case tracker.concurrencyLimmiter <- struct{}{}:
-		fmt.Println("Tem espaço pra query! ", query)
 		tracker.mu.Lock()
 		defer tracker.mu.Unlock()
 		idx, err := tracker.findEmptyQuerySlot()
