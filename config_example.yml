@@ -6,8 +6,18 @@ api:
 
 # Configs about queries
 querying:
-  # [optional] Configures how many samples at max can be held in memory on a single query. Default value is 10000.
+  # [optional] Configures how many samples at max can be held in memory on a single query.
+  # Default value is 10000.
   max_samples: 2048
+  # [optional] Configures how old a datapoint has to be before considered stale. It has to be a
+  # "duration format", like 5m (5 minutes), 30s (30 seconds). Using too little value here will
+  # put pressure on the remote storages, as any delay in ingestion will make the metric be
+  # considered stale (and as consequence the instance query would return empty).
+  # To undersstand it deeper, read Prometheus definition:
+  # https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness
+  # The bigger this number, the more probable that more data is going to be fetched from remotes
+  # on each query. Default 5m.
+  lookback_delta: 9m
 
 # [optional] Controls the log level. Allowed values: debug, info, warn, error. Default value is "info"
 log:

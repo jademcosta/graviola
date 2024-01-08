@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-// const StrategyFailAll = "fail_all"
-// const StrategyPartialResponse = "partial_response"
 const DefaultPort = 9197
 const DefaultTimeout = "1m"
 

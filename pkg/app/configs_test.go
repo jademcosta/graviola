@@ -7,6 +7,7 @@ api:
 
 query:
   max_samples: 1000
+  lookback_delta: 5m
 
 log:
   level: error

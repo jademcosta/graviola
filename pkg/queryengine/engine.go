@@ -23,10 +23,10 @@ func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Regi
 	wrapped := promql.NewEngine(promql.EngineOpts{
 		Timeout:              conf.ApiConf.TimeoutDuration(),
 		MaxSamples:           conf.QueryConf.MaxSamples,
-		LookbackDelta:        5 * time.Minute, //TODO: add config for all these
+		LookbackDelta:        conf.QueryConf.LookbackDeltaDuration(),
 		EnableAtModifier:     true,
 		EnableNegativeOffset: true,
-		ActiveQueryTracker:   querytracker.NewGraviolaQueryTracker(2),
+		ActiveQueryTracker:   querytracker.NewGraviolaQueryTracker(2), //TODO: allow to config this one
 		Reg:                  metricRegistry,
 		Logger:               graviolalog.AdaptToGoKitLogger(logger),
 	})

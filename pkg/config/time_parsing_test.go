@@ -23,6 +23,7 @@ func TestTimeParsing(t *testing.T) {
 		{"1MS", 0, true},
 		{"1S", 0, true},
 		{"1D", 0, true},
+		{"0", 0, true},
 
 		{"1s", 1 * time.Second, false},
 		{"1ms", 1 * time.Millisecond, false},

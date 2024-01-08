@@ -17,13 +17,33 @@ func TestQueryValidate(t *testing.T) {
 	err = sut.IsValid()
 	assert.Error(t, err, "should return error when max_samples is < 0")
 
-	sut = config.QueryConfig{MaxSamples: 1}
+	sut = config.QueryConfig{MaxSamples: 1, LookbackDelta: "something"}
 	err = sut.IsValid()
-	assert.NoError(t, err, "should return NO error when max_samples is > 1")
+	assert.Error(t, err, "should return error when lookback_delta is not a number")
 
-	sut = config.QueryConfig{MaxSamples: 84782}
+	sut = config.QueryConfig{MaxSamples: 1, LookbackDelta: "0"}
 	err = sut.IsValid()
-	assert.NoError(t, err, "should return NO error when max_samples is > 1")
+	assert.Error(t, err, "should return error when lookback_delta is 0")
+
+	sut = config.QueryConfig{MaxSamples: 1, LookbackDelta: ""}
+	err = sut.IsValid()
+	assert.Error(t, err, "should return error when lookback_delta is empty")
+
+	sut = config.QueryConfig{MaxSamples: 1, LookbackDelta: "-1ms"}
+	err = sut.IsValid()
+	assert.Error(t, err, "should return error when lookback_delta is <0")
+
+	sut = config.QueryConfig{MaxSamples: 1, LookbackDelta: "0s"}
+	err = sut.IsValid()
+	assert.Error(t, err, "should return error when lookback_delta is 0s")
+
+	sut = config.QueryConfig{MaxSamples: 1, LookbackDelta: "1ms"}
+	err = sut.IsValid()
+	assert.NoError(t, err, "should return NO error when max_samples is > 1 and lookback_delta is > 0")
+
+	sut = config.QueryConfig{MaxSamples: 84782, LookbackDelta: "17m"}
+	err = sut.IsValid()
+	assert.NoError(t, err, "should return NO error when max_samples is > 1 and lookback_delta is > 0")
 }
 
 func TestQueryDefaultValues(t *testing.T) {

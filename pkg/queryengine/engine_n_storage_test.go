@@ -25,7 +25,8 @@ var conf config.GraviolaConfig = config.GraviolaConfig{
 		Timeout: "3m",
 	},
 	QueryConf: config.QueryConfig{
-		MaxSamples: 1000,
+		MaxSamples:    1000,
+		LookbackDelta: config.DefaultQueryLookbackDelta,
 	},
 }
 
@@ -214,7 +215,7 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 
 		currentTime := time.Now()
 
-		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 5*time.Minute), tc.query, currentTime)
+		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
 		assert.NoError(t, err, "should return no error")
 
 		querier.Exec(ctx)
@@ -271,7 +272,7 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		}
 
 		querier, err := eng.NewRangeQuery(
-			ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 5*time.Minute), tc.query,
+			ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query,
 			startTime, endTime, step,
 		)
 		if err != nil {
@@ -399,7 +400,7 @@ func TestIntegrationHandlesCorrectlyTheReturnedSeriesSetOnInstantQuery(t *testin
 		gravStorage := storageproxy.NewGraviolaStorage(logger, groups)
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
-		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 5*time.Minute), tc.query, currentTime)
+		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
 		assert.NoError(t, err, "should return no error")
 
 		result := querier.Exec(ctx)

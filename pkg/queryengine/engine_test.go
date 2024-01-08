@@ -139,7 +139,8 @@ func TestSampleLimit(t *testing.T) {
 				Timeout: "3m",
 			},
 			QueryConf: config.QueryConfig{
-				MaxSamples: tc.maxSamples,
+				MaxSamples:    tc.maxSamples,
+				LookbackDelta: config.DefaultQueryLookbackDelta,
 			},
 		}
 
@@ -150,7 +151,7 @@ func TestSampleLimit(t *testing.T) {
 		gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1})
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
-		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 5*time.Minute), "up", currentTime)
+		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
 		assert.NoError(t, err, "should return no error")
 
 		result := querier.Exec(ctx)
@@ -161,5 +162,42 @@ func TestSampleLimit(t *testing.T) {
 			assert.NoError(t, result.Err, "query should NOT error when returned series %s", tc.caseName)
 		}
 	}
+}
 
+func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
+	logger := graviolalog.NewLogger(conf.LogConf)
+	reg := prometheus.NewRegistry()
+	ctx := context.Background()
+	currentTime := time.Now()
+
+	conf := config.GraviolaConfig{
+		ApiConf: config.ApiConfig{
+			Timeout: "3m",
+		},
+		QueryConf: config.QueryConfig{
+			MaxSamples:    10,
+			LookbackDelta: "17s",
+		},
+	}
+
+	mock1 := &MockQuerier{
+		selectReturn: storage.NoopSeriesSet(),
+	}
+
+	gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1})
+	eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
+
+	querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
+	assert.NoError(t, err, "should return no error")
+
+	querier.Exec(ctx)
+
+	assert.Equal(
+		t,
+		selectCalled{sortSeries: false, hints: &storage.SelectHints{
+			End:   currentTime.UnixMilli(),
+			Start: currentTime.Add(-17 * time.Second).UnixMilli(),
+		}, matchers: []*labels.Matcher{labels.MustNewMatcher(labels.MatchEqual, "__name__", "up")}},
+		mock1.selectCalledWith[0],
+	)
 }
