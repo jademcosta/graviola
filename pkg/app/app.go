@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/jademcosta/graviola/pkg/storageproxy"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
@@ -48,7 +50,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	apiV1 := api_v1.NewAPI(
 		eng,
 		graviolaStorage,
-		nil, //TODO: Appender, seems to be Ok to be nil
+		nil, // storage.Appendable // seems to be Ok to be nil
 		&storageproxy.GraviolaExemplarQueryable{},
 		nil,                        // func(context.Context) ScrapePoolsRetriever
 		nil,                        // func(context.Context) TargetRetriever
@@ -85,15 +87,16 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	router := route.New()
 
-	// TODO: is this needed?
-	// metricRegistry.MustRegister(
-	// 	collectors.NewBuildInfoCollector(),
-	// 	collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	// 	collectors.NewGoCollector(
-	// 		collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
-	// 	),
-	// )
+	metricRegistry.MustRegister(
+		collectors.NewBuildInfoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		collectors.NewGoCollector(
+			collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
+		),
+	)
 	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
+	router.Get("/healthy", alwaysSuccessfulHandler)
+	router.Get("/ready", alwaysSuccessfulHandler)
 
 	router = router.WithPrefix("/api/v1")
 	apiV1.Register(router)
@@ -160,4 +163,8 @@ func initializeRemotes(logger *slog.Logger, remotesConf []config.RemoteConfig) [
 	}
 
 	return remotes
+}
+
+func alwaysSuccessfulHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
