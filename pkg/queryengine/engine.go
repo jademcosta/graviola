@@ -21,13 +21,14 @@ type GraviolaQueryEngine struct {
 
 func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Registry, conf config.GraviolaConfig) *GraviolaQueryEngine {
 	wrapped := promql.NewEngine(promql.EngineOpts{
-		Timeout:            conf.ApiConf.TimeoutDuration(),
-		MaxSamples:         10000, //TODO: add config for all these
-		LookbackDelta:      5 * time.Minute,
-		EnableAtModifier:   true,
-		ActiveQueryTracker: querytracker.NewGraviolaQueryTracker(2),
-		Reg:                metricRegistry,
-		Logger:             graviolalog.AdaptToGoKitLogger(logger),
+		Timeout:              conf.ApiConf.TimeoutDuration(),
+		MaxSamples:           conf.QueryConf.MaxSamples,
+		LookbackDelta:        5 * time.Minute, //TODO: add config for all these
+		EnableAtModifier:     true,
+		EnableNegativeOffset: true,
+		ActiveQueryTracker:   querytracker.NewGraviolaQueryTracker(2),
+		Reg:                  metricRegistry,
+		Logger:               graviolalog.AdaptToGoKitLogger(logger),
 	})
 
 	return &GraviolaQueryEngine{

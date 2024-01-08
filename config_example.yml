@@ -4,6 +4,11 @@ api:
   # an error is returned.
   timeout: 1m
 
+# Configs about queries
+querying:
+  # [optional] Configures how many samples at max can be held in memory on a single query. Default value is 10000.
+  max_samples: 2048
+
 # [optional] Controls the log level. Allowed values: debug, info, warn, error. Default value is "info"
 log:
   level: info

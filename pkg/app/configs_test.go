@@ -5,6 +5,9 @@ api:
   port: 8091
   timeout: 3m
 
+query:
+  max_samples: 1000
+
 log:
   level: error
 

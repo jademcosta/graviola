@@ -13,6 +13,9 @@ api:
   port: 8091
   timeout: 12m
 
+query:
+  max_samples: 12345
+
 log:
   level: "error"
 
@@ -66,6 +69,9 @@ func TestParse(t *testing.T) {
 		ApiConf: config.ApiConfig{
 			Port:    8091,
 			Timeout: "12m",
+		},
+		QueryConf: config.QueryConfig{
+			MaxSamples: 12345,
 		},
 		LogConf: config.LogConfig{
 			Level: "error",
@@ -224,5 +230,6 @@ func TestFillDefaultsCallsItOnChildren(t *testing.T) {
 	sut = sut.FillDefaults()
 	assert.Equal(t, config.DefaultPort, sut.ApiConf.Port, "should have filled API defaults")
 	assert.Equal(t, config.DefaultLogLevel, sut.LogConf.Level, "should have filled Log defaults")
-	assert.Equal(t, config.DefaultMergeStrategyType, sut.StoragesConf.MergeConf.Type, "should have filled storage defaults default")
+	assert.Equal(t, config.DefaultMergeStrategyType, sut.StoragesConf.MergeConf.Type, "should have filled storage defaults")
+	assert.Equal(t, config.DefaultQueryMaxSamples, sut.QueryConf.MaxSamples, "should have filled querying defaults")
 }
