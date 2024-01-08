@@ -10,6 +10,7 @@ type GraviolaConfig struct {
 	ApiConf      ApiConfig      `yaml:"api"`
 	LogConf      LogConfig      `yaml:"log"`
 	StoragesConf StoragesConfig `yaml:"storages"`
+	QueryConf    QueryConfig    `yaml:"query"`
 }
 
 func Parse(data []byte) (GraviolaConfig, error) {
@@ -27,6 +28,7 @@ func (gravConf GraviolaConfig) FillDefaults() GraviolaConfig {
 	gravConf.ApiConf = gravConf.ApiConf.FillDefaults()
 	gravConf.LogConf = gravConf.LogConf.FillDefaults()
 	gravConf.StoragesConf = gravConf.StoragesConf.FillDefaults()
+	gravConf.QueryConf = gravConf.QueryConf.FillDefaults()
 
 	return gravConf
 }
@@ -43,6 +45,11 @@ func (gravConf GraviolaConfig) IsValid() error {
 	}
 
 	err = gravConf.StoragesConf.IsValid()
+	if err != nil {
+		return err
+	}
+
+	err = gravConf.QueryConf.IsValid()
 	if err != nil {
 		return err
 	}

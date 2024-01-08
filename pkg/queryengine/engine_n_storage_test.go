@@ -20,6 +20,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var conf config.GraviolaConfig = config.GraviolaConfig{
+	ApiConf: config.ApiConfig{
+		Timeout: "3m",
+	},
+	QueryConf: config.QueryConfig{
+		MaxSamples: 1000,
+	},
+}
+
 var queryTestCases = []struct {
 	hintsFunc     func() *storage.SelectHints
 	query         string
@@ -185,11 +194,6 @@ func (mock *MockQuerier) LabelNames(ctx context.Context, matchers ...*labels.Mat
 }
 
 func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
-	conf := config.GraviolaConfig{
-		ApiConf: config.ApiConfig{
-			Timeout: "3m",
-		},
-	}
 
 	logger := graviolalog.NewLogger(conf.LogConf)
 	ctx := context.Background()
@@ -303,11 +307,6 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 }
 
 func TestIntegrationHandlesCorrectlyTheReturnedSeriesSetOnInstantQuery(t *testing.T) {
-	conf := config.GraviolaConfig{
-		ApiConf: config.ApiConfig{
-			Timeout: "3m",
-		},
-	}
 
 	logger := graviolalog.NewLogger(conf.LogConf)
 	ctx := context.Background()
