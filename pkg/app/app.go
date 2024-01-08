@@ -48,7 +48,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	apiV1 := api_v1.NewAPI(
 		eng,
 		graviolaStorage,
-		nil, //TODO: Appender, seems to be Ok to be nil
+		nil, // storage.Appendable // seems to be Ok to be nil
 		&storageproxy.GraviolaExemplarQueryable{},
 		nil,                        // func(context.Context) ScrapePoolsRetriever
 		nil,                        // func(context.Context) TargetRetriever
@@ -94,6 +94,8 @@ func NewApp(conf config.GraviolaConfig) *App {
 	// 	),
 	// )
 	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
+	router.Get("/healthy", alwaysSuccessfulHandler)
+	router.Get("/ready", alwaysSuccessfulHandler)
 
 	router = router.WithPrefix("/api/v1")
 	apiV1.Register(router)
@@ -160,4 +162,8 @@ func initializeRemotes(logger *slog.Logger, remotesConf []config.RemoteConfig) [
 	}
 
 	return remotes
+}
+
+func alwaysSuccessfulHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
