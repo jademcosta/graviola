@@ -24,7 +24,7 @@ import (
 
 const DefaultInstantQueryPath = "/api/v1/query"
 const DefaultRangeQueryPath = "/api/v1/query_range"
-const DefaultStep = 15000 //15 seconds
+const DefaultStep = 30 //30 seconds
 
 type RemoteStorage struct {
 	logg   *slog.Logger
@@ -34,7 +34,6 @@ type RemoteStorage struct {
 }
 
 func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() time.Time) *RemoteStorage {
-	//TODO: add WITH on the logger
 	return &RemoteStorage{
 		logg:   logg.With("name", conf.Name, "component", "remote"),
 		URLs:   generateURLs(conf, logg),
@@ -70,16 +69,17 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 
 	} else if hints.End == hints.Start {
 		urlForQuery = rStorage.URLs["instant_query"]
-		params.Set("start", fmt.Sprintf("%d", hints.Start))
-		params.Set("end", fmt.Sprintf("%d", hints.End))
-		params.Set("step", fmt.Sprintf("%d", hints.Step))
+		params.Set("time", fmt.Sprintf("%d", removeMillisFromUnixTimestamp(hints.Start)))
 	} else {
-		params.Set("start", fmt.Sprintf("%d", hints.Start))
-		params.Set("end", fmt.Sprintf("%d", hints.End))
-		params.Set("step", fmt.Sprintf("%d", hints.Step))
-		if hints.Step == 0 {
+		params.Set("start", fmt.Sprintf("%d", removeMillisFromUnixTimestamp(hints.Start)))
+		params.Set("end", fmt.Sprintf("%d", removeMillisFromUnixTimestamp(hints.End)))
+
+		if hints.Step == 0 { //TODO: allow a default step to be set by configs
 			params.Set("step", fmt.Sprintf("%d", DefaultStep))
-		} //TODO: allow a default step to be set by configs
+		} else {
+			// The engine turn step into milliseconds, but the API accepts only seconds
+			params.Set("step", fmt.Sprintf("%d", hints.Step/1000))
+		}
 
 		urlForQuery = rStorage.URLs["range_query"]
 	}
@@ -119,8 +119,6 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 			Annots: map[string]error{"remote_storage": e},
 		}
 	}
-
-	//FIXME: tá retornando vazia a response :(
 
 	rStorage.logg.Debug("remote response", "body", string(data), "headers", resp.Header)
 
@@ -434,4 +432,9 @@ func ToPromQLQuery(matchers []*labels.Matcher) (*string, error) {
 
 	result := query.String()
 	return &result, nil
+}
+
+// The timestamp passed down has milliseconds in it, the API wants it without millis
+func removeMillisFromUnixTimestamp(timestampWithMillis int64) int64 {
+	return time.UnixMilli(timestampWithMillis).Unix()
 }

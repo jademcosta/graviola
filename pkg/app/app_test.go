@@ -124,22 +124,22 @@ func TestIntegrationQueryEngineUsesTheLookbackDelta(t *testing.T) {
 	start := mustParseInt64(mockRemote1.calledWith[0].Form.Get("start"))
 	hundredMilliseconds := 100.0
 
-	assert.InDelta(t, currentTime.UnixMilli(), end, hundredMilliseconds, "should have sent the end parameter close to the current time")
-	assert.InDelta(t, currentTime.Add(-5*time.Minute).UnixMilli(), start, hundredMilliseconds,
+	assert.InDelta(t, currentTime.Unix(), end, hundredMilliseconds, "should have sent the end parameter close to the current time")
+	assert.InDelta(t, currentTime.Add(-5*time.Minute).Unix(), start, hundredMilliseconds,
 		"should have sent the start parameter as the default value of '5 minutes ago'")
-	assert.Equal(t, "", mockRemote1.calledWith[0].Form.Get("step"), "the default step is empty") //FIXME: does Prometheus accept it?
+	assert.Equal(t, "30", mockRemote1.calledWith[0].Form.Get("step"), "the default step is NOT empty")
 	assert.Equal(t, "{lbl1=\"val1\",}", mockRemote1.calledWith[0].Form.Get("query"), "the query should be present")
 
 	queryURL = "http://localhost:8091/api/v1/query_range"
-	doRequest(queryURL, storage.SelectHints{Start: 12145, End: 12595, Step: 1}, labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
+	doRequest(queryURL, storage.SelectHints{Start: 12145, End: 12595, Step: 11}, labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
 
 	end = mustParseInt64(mockRemote1.calledWith[1].Form.Get("end"))
 	start = mustParseInt64(mockRemote1.calledWith[1].Form.Get("start"))
 	step := mustParseInt64(mockRemote1.calledWith[1].Form.Get("step"))
 
-	assert.Equal(t, int64(11845000), start, "should have sent the start parameter provided, minus the 5 minutes stale data, * 1000")
-	assert.Equal(t, int64(12595000), end, "should have sent the end parameter provided, * 1000")
-	assert.Equal(t, int64(1000), step, "should have sent the step parameter provided, * 1000")
+	assert.Equal(t, int64(11845), start, "should have sent the start parameter provided, minus the 5 minutes stale data")
+	assert.Equal(t, int64(12595), end, "should have sent the end parameter provided")
+	assert.Equal(t, int64(11), step, "should have sent the step parameter provided")
 	assert.Equal(t, "{lbl1=\"val1\",}", mockRemote1.calledWith[1].Form.Get("query"), "the query should be present")
 }
 
@@ -170,9 +170,13 @@ func TestIntegrationSingleRemoteSuccess(t *testing.T) {
 
 	testCases := []struct {
 		route        string
+		hints        storage.SelectHints
 		responseData mockRemoteRoute
-	}{
+	}{ //TODO: add more cases
 		{"/api/v1/query_range",
+			storage.SelectHints{
+				Start: currentTime.Unix(), End: currentTime.Unix(), Step: 30,
+			},
 			mockRemoteRoute{
 				status:     200,
 				resultType: "matrix",
@@ -188,7 +192,7 @@ func TestIntegrationSingleRemoteSuccess(t *testing.T) {
 						},
 						{
 							Lbs:        labels.FromStrings("new-label", "new_value", "__name__", "my-metric"),
-							Datapoints: []model.SamplePair{{Timestamp: model.Time(currentTime.Add(-1 * time.Minute).UnixMilli()), Value: 1.0}},
+							Datapoints: []model.SamplePair{{Timestamp: model.Time(currentTime.Add(-2 * time.Minute).UnixMilli()), Value: 1.0}},
 						},
 					},
 				},
@@ -205,10 +209,7 @@ func TestIntegrationSingleRemoteSuccess(t *testing.T) {
 		}
 
 		resp := doRequest(
-			queryURL,
-			storage.SelectHints{
-				Start: currentTime.Unix(), End: currentTime.Unix(), Step: 30,
-			}, labels.MustNewMatcher(labels.MatchEqual, "lbl111", "value111"),
+			queryURL, tc.hints, labels.MustNewMatcher(labels.MatchEqual, "lbl111", "value111"),
 		)
 
 		body, err := io.ReadAll(resp.Body)
@@ -222,15 +223,14 @@ func TestIntegrationSingleRemoteSuccess(t *testing.T) {
 		err = json.Unmarshal(*respJSON["data"], &dataJSON)
 		panicOnError(err)
 
-		fmt.Printf("\nAE, o resp do Graviola: %v\n\n", string(body)) //TODO: remove
-
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "HTTP status should be 200")
 		assert.Equal(t, "\"success\"", string(*respJSON["status"]), "response JSON status should be success")
 
 		assert.Equal(t, "\"matrix\"", string(*dataJSON["resultType"]), "result type should be matrix")
 
+		//Notice that it answers the "old" values as being at the current time
 		resultTemp := fmt.Sprintf("[{\"metric\":{\"__name__\":\"my-metric\",\"lbl111\":\"value111\"},\"values\":[[%d,\"312\"]]},{\"metric\":{\"__name__\":\"my-metric\",\"lbl111\":\"value222\"},\"values\":[[%d,\"0.1\"]]},{\"metric\":{\"__name__\":\"my-metric\",\"new-label\":\"new_value\"},\"values\":[[%d,\"1\"]]}]",
-			currentTime.Unix(), currentTime.Add(-time.Minute).Unix(), currentTime.Add(-time.Minute).Unix())
+			currentTime.Unix(), currentTime.Unix(), currentTime.Unix())
 		assert.Equal(t, resultTemp, string(*dataJSON["result"]), "should have answered with the expected result inside the response")
 	}
 }

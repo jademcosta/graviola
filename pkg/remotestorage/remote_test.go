@@ -70,7 +70,8 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 				labels.MustNewMatcher(labels.MatchEqual, "__name__", "value1"),
 				labels.MustNewMatcher(labels.MatchRegexp, "label2", "value2.*"),
 			},
-			&storage.SelectHints{Start: 1234, End: 5678, Step: 7},
+			&storage.SelectHints{Start: 1234000, End: 5678000, Step: 7000},
+			// Notice that the values are turned from milliseconds into seconds
 			`end=5678&query={__name__="value1",label2=~"value2.*",}&start=1234&step=7`,
 			false,
 		},
@@ -90,7 +91,24 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 			`query={labelName="labelVal",}`,
 			true,
 		},
-		//TODO: add more cases
+		{
+			[]*labels.Matcher{
+				labels.MustNewMatcher(labels.MatchEqual, "__name__", "value1"),
+				labels.MustNewMatcher(labels.MatchRegexp, "label2", "value2.*"),
+			},
+			&storage.SelectHints{Start: 1234000, End: 5678000},
+			`end=5678&query={__name__="value1",label2=~"value2.*",}&start=1234&step=30`,
+			false,
+		},
+		{
+			[]*labels.Matcher{
+				labels.MustNewMatcher(labels.MatchEqual, "__name__", "value1"),
+				labels.MustNewMatcher(labels.MatchRegexp, "label2", "value2.*"),
+			},
+			&storage.SelectHints{Start: 5678000, End: 5678000},
+			`query={__name__="value1",label2=~"value2.*",}&time=5678`,
+			true,
+		},
 	}
 
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
