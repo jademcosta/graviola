@@ -18,6 +18,10 @@ querying:
   # The bigger this number, the more probable that more data is going to be fetched from remotes
   # on each query. Default 5m.
   lookback_delta: 9m
+  # [optional] Set the maximum simultaneous queries running. This means that if query 21
+  # arrives, it will be denied. So, size the machine running Graviola to be able to
+  # handle the load. Default is 20.
+  max_concurrent_queries: 30
 
 # [optional] Controls the log level. Allowed values: debug, info, warn, error. Default value is "info"
 log:

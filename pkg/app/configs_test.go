@@ -8,6 +8,7 @@ api:
 query:
   max_samples: 1000
   lookback_delta: 5m
+  max_concurrent_queries: 30
 
 log:
   level: error

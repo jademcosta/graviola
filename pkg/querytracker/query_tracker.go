@@ -3,67 +3,46 @@ package querytracker
 import (
 	"context"
 	"fmt"
-	"sync"
+	"math"
+	"math/rand"
 )
 
-// FIXME: add tests
 type GraviolaQueryTracker struct {
-	mu                  sync.Mutex
-	concurrencyLimmiter chan struct{}
-	queries             []string
+	concurrencyLimmiter  chan struct{}
+	maxConcurrentQueries int
 }
 
 func NewGraviolaQueryTracker(maxConcurrentQueries int) *GraviolaQueryTracker {
 	if maxConcurrentQueries < 1 {
-		panic("maxConcurrentQueries < 1") //TODO: add a logger
+		panic("maxConcurrentQueries < 1")
 	}
 
 	return &GraviolaQueryTracker{
 		concurrencyLimmiter: make(chan struct{}, maxConcurrentQueries),
-		queries:             make([]string, maxConcurrentQueries),
 	}
 }
 
+// QueryTracker
+// GetMaxConcurrent returns maximum number of concurrent queries that are allowed by this tracker.
 func (tracker *GraviolaQueryTracker) GetMaxConcurrent() int {
-	tracker.mu.Lock()
-	defer tracker.mu.Unlock()
-	return len(tracker.queries)
+	return tracker.maxConcurrentQueries
 }
 
+// QueryTracker
+// Insert inserts query into query tracker. This call must block if maximum number of queries is already running.
+// If Insert doesn't return error then returned integer value should be used in subsequent Delete call.
+// Insert should return error if context is finished before query can proceed, and integer value returned in this case should be ignored by caller.
 func (tracker *GraviolaQueryTracker) Insert(ctx context.Context, query string) (int, error) {
 	select {
 	case tracker.concurrencyLimmiter <- struct{}{}:
-		tracker.mu.Lock()
-		defer tracker.mu.Unlock()
-		idx, err := tracker.findEmptyQuerySlot()
-		if err != nil {
-			//TODO: log msg
-			fmt.Println("ERROR graviola: ", err)
-			return 0, err
-		}
-
-		tracker.queries[idx] = query
-		return idx, nil
-
+		return rand.Intn(math.MaxInt), nil
 	case <-ctx.Done():
 		return 0, fmt.Errorf("when waiting for query concurrency slot: %w", context.DeadlineExceeded)
-
 	}
 }
 
+// QueryTracker
+// Delete removes query from activity tracker. InsertIndex is value returned by Insert call.
 func (tracker *GraviolaQueryTracker) Delete(insertIndex int) {
-	tracker.mu.Lock() //XXX: defer é LIFO, o mais de baixo roda primeiro
-	defer func() { <-tracker.concurrencyLimmiter }()
-	defer tracker.mu.Unlock()
-
-	tracker.queries[insertIndex] = ""
-}
-
-func (tracker *GraviolaQueryTracker) findEmptyQuerySlot() (int, error) {
-	for idx, val := range tracker.queries {
-		if val == "" {
-			return idx, nil
-		}
-	}
-	return 0, fmt.Errorf("no empty query slot on query tracker")
+	<-tracker.concurrencyLimmiter
 }

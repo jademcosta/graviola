@@ -7,10 +7,12 @@ import (
 
 const DefaultQueryMaxSamples = 10000
 const DefaultQueryLookbackDelta = "5m"
+const DefaultQueryConcurrentQueries = 20
 
 type QueryConfig struct {
-	MaxSamples    int    `yaml:"max_samples"`
-	LookbackDelta string `yaml:"lookback_delta"`
+	MaxSamples        int    `yaml:"max_samples"`
+	LookbackDelta     string `yaml:"lookback_delta"`
+	ConcurrentQueries int    `yaml:"max_concurrent_queries"`
 }
 
 func (qc QueryConfig) FillDefaults() QueryConfig {
@@ -20,6 +22,10 @@ func (qc QueryConfig) FillDefaults() QueryConfig {
 
 	if qc.LookbackDelta == "" {
 		qc.LookbackDelta = DefaultQueryLookbackDelta
+	}
+
+	if qc.ConcurrentQueries <= 0 {
+		qc.ConcurrentQueries = DefaultQueryConcurrentQueries
 	}
 
 	return qc
@@ -41,6 +47,10 @@ func (qc QueryConfig) IsValid() error {
 
 	if parsed == 0 {
 		return fmt.Errorf("error validating query lookback_delta: it cannot be zero")
+	}
+
+	if qc.ConcurrentQueries <= 0 {
+		return fmt.Errorf("error validating query concurrent_queries: it cannot be <= 0")
 	}
 
 	return nil

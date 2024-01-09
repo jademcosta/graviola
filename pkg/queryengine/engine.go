@@ -26,7 +26,7 @@ func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Regi
 		LookbackDelta:        conf.QueryConf.LookbackDeltaDuration(),
 		EnableAtModifier:     true,
 		EnableNegativeOffset: true,
-		ActiveQueryTracker:   querytracker.NewGraviolaQueryTracker(2), //TODO: allow to config this one
+		ActiveQueryTracker:   querytracker.NewGraviolaQueryTracker(conf.QueryConf.ConcurrentQueries),
 		Reg:                  metricRegistry,
 		Logger:               graviolalog.AdaptToGoKitLogger(logger),
 	})

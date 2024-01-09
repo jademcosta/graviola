@@ -2,6 +2,7 @@ package queryengine_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -139,8 +140,9 @@ func TestSampleLimit(t *testing.T) {
 				Timeout: "3m",
 			},
 			QueryConf: config.QueryConfig{
-				MaxSamples:    tc.maxSamples,
-				LookbackDelta: config.DefaultQueryLookbackDelta,
+				MaxSamples:        tc.maxSamples,
+				LookbackDelta:     config.DefaultQueryLookbackDelta,
+				ConcurrentQueries: 2,
 			},
 		}
 
@@ -175,8 +177,9 @@ func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
 			Timeout: "3m",
 		},
 		QueryConf: config.QueryConfig{
-			MaxSamples:    10,
-			LookbackDelta: "17s",
+			MaxSamples:        10,
+			LookbackDelta:     "17s",
+			ConcurrentQueries: 2,
 		},
 	}
 
@@ -200,4 +203,54 @@ func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
 		}, matchers: []*labels.Matcher{labels.MustNewMatcher(labels.MatchEqual, "__name__", "up")}},
 		mock1.selectCalledWith[0],
 	)
+}
+
+func TestEngineConcurrentQueriesLimit(t *testing.T) {
+	logger := graviolalog.NewLogger(conf.LogConf)
+	reg := prometheus.NewRegistry()
+	ctx := context.Background()
+	currentTime := time.Now()
+
+	conf := config.GraviolaConfig{
+		ApiConf: config.ApiConfig{
+			Timeout: "3m",
+		},
+		QueryConf: config.QueryConfig{
+			MaxSamples:        10,
+			LookbackDelta:     "17s",
+			ConcurrentQueries: 1,
+		},
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	mock1 := &MockQuerier{
+		selectReturn: storage.NoopSeriesSet(),
+		delay:        200 * time.Millisecond,
+	}
+
+	gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1})
+	eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
+
+	querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
+	assert.NoError(t, err, "should return no error")
+
+	start := time.Now()
+
+	querier.Exec(ctx)
+	wg.Done()
+
+	go func() {
+		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
+		assert.NoError(t, err, "should return no error")
+		querier.Exec(ctx)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	elapsed := time.Since(start)
+
+	assert.GreaterOrEqual(t, elapsed, 400*time.Millisecond, "should have respected the concurrent queries limit")
 }

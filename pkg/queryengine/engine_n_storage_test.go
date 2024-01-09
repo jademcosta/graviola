@@ -25,8 +25,9 @@ var conf config.GraviolaConfig = config.GraviolaConfig{
 		Timeout: "3m",
 	},
 	QueryConf: config.QueryConfig{
-		MaxSamples:    1000,
-		LookbackDelta: config.DefaultQueryLookbackDelta,
+		MaxSamples:        1000,
+		LookbackDelta:     config.DefaultQueryLookbackDelta,
+		ConcurrentQueries: 1,
 	},
 }
 
@@ -169,6 +170,7 @@ type selectCalled struct {
 }
 
 type MockQuerier struct {
+	delay            time.Duration
 	selectCalledWith []selectCalled
 	selectReturn     storage.SeriesSet
 }
@@ -179,6 +181,10 @@ func (mock *MockQuerier) Select(ctx context.Context, sortSeries bool, hints *sto
 		hints:      hints,
 		matchers:   matchers,
 	})
+
+	if mock.delay != 0 {
+		time.Sleep(mock.delay)
+	}
 	return mock.selectReturn
 }
 
