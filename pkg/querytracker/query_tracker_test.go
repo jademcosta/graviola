@@ -17,11 +17,14 @@ func TestInsertBlocksIfMaxConcurrencyIsReached(t *testing.T) {
 
 	sut := querytracker.NewGraviolaQueryTracker(2)
 
-	sut.Insert(ctx, "")
-	sut.Insert(ctx, "")
+	_, err := sut.Insert(ctx, "")
+	assert.NoError(t, err, "should not error")
+	_, err = sut.Insert(ctx, "")
+	assert.NoError(t, err, "should not error")
 
 	go func() {
-		sut.Insert(ctx, "")
+		_, err := sut.Insert(ctx, "")
+		assert.NoError(t, err, "should not error")
 		signalChan <- struct{}{}
 	}()
 
@@ -50,8 +53,10 @@ func TestABlockedInsertIsReleasedIfContextIsDone(t *testing.T) {
 
 	sut := querytracker.NewGraviolaQueryTracker(2)
 
-	sut.Insert(ctx, "")
-	sut.Insert(ctx, "")
+	_, err := sut.Insert(ctx, "")
+	assert.NoError(t, err, "should not error")
+	_, err = sut.Insert(ctx, "")
+	assert.NoError(t, err, "should not error")
 
 	go func() {
 		_, err := sut.Insert(ctx, "")
