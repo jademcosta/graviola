@@ -14,6 +14,7 @@ import (
 	grafanaregexp "github.com/grafana/regexp"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
+	"github.com/jademcosta/graviola/pkg/o11y"
 	"github.com/jademcosta/graviola/pkg/queryengine"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
@@ -45,7 +46,8 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	eng := queryengine.NewGraviolaQueryEngine(logger, metricRegistry, conf)
 
-	graviolaStorage := storageproxy.NewGraviolaStorage(logger, initializeGroups(logger, conf.StoragesConf.Groups))
+	graviolaStorage := storageproxy.NewGraviolaStorage(logger,
+		initializeGroups(logger, metricRegistry, conf.StoragesConf.Groups))
 
 	apiV1 := api_v1.NewAPI(
 		eng,
@@ -145,21 +147,23 @@ func alwaysReadyHandler(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func initializeGroups(logger *slog.Logger, groupsConf []config.GroupsConfig) []storage.Querier {
+func initializeGroups(logger *slog.Logger, metricz *prometheus.Registry, groupsConf []config.GroupsConfig) []storage.Querier {
 	groups := make([]storage.Querier, 0, len(groupsConf))
 
 	for _, groupConf := range groupsConf {
-		groups = append(groups, remotestoragegroup.NewGroup(logger, groupConf.Name, initializeRemotes(logger, groupConf.Servers)))
+		group := remotestoragegroup.NewGroup(logger, groupConf.Name, initializeRemotes(logger, metricz, groupConf.Servers))
+		groups = append(groups, o11y.NewQuerierO11y(metricz, groupConf.Name, "group", group))
 	}
 
 	return groups
 }
 
-func initializeRemotes(logger *slog.Logger, remotesConf []config.RemoteConfig) []storage.Querier {
+func initializeRemotes(logger *slog.Logger, metricz *prometheus.Registry, remotesConf []config.RemoteConfig) []storage.Querier {
 	remotes := make([]storage.Querier, 0, len(remotesConf))
 
 	for _, remoteConf := range remotesConf {
-		remotes = append(remotes, remotestorage.NewRemoteStorage(logger, remoteConf, time.Now))
+		remote := remotestorage.NewRemoteStorage(logger, remoteConf, time.Now)
+		remotes = append(remotes, o11y.NewQuerierO11y(metricz, remoteConf.Name, "remote", remote))
 	}
 
 	return remotes
