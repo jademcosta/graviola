@@ -19,7 +19,7 @@ func TestStoragesValidate(t *testing.T) {
 	sut.MergeConf = config.MergeStrategyConfig{}
 	assert.Error(t, sut.IsValid(), "should error when merge strategy errors")
 
-	sut.MergeConf = config.MergeStrategyConfig{Type: "always_merge"}
+	sut.MergeConf = config.MergeStrategyConfig{Strategy: "always_merge"}
 	assert.NoError(t, sut.IsValid(), "should NOT error when everything is valid")
 
 	sut.Groups = append(sut.Groups, config.GroupsConfig{})
@@ -32,7 +32,7 @@ func TestStoragesFillDefaults(t *testing.T) {
 	sut := config.StoragesConfig{}
 
 	sut = sut.FillDefaults()
-	assert.Equal(t, config.DefaultMergeStrategyType, sut.MergeConf.Type, "should have called FillDefaults on children configs")
+	assert.Equal(t, config.DefaultMergeStrategyType, sut.MergeConf.Strategy, "should have called FillDefaults on children configs")
 
 	sut = config.StoragesConfig{Groups: []config.GroupsConfig{{}, {}}}
 	sut = sut.FillDefaults()

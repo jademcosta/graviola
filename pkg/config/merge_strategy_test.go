@@ -25,7 +25,7 @@ func TestAcceptSpecificMergeStrategiesNames(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		sut := config.MergeStrategyConfig{Type: tc.value}
+		sut := config.MergeStrategyConfig{Strategy: tc.value}
 		err := sut.IsValid()
 
 		if tc.shouldError {
@@ -40,6 +40,6 @@ func TestMergeStrategyDefaultValues(t *testing.T) {
 	sut := config.MergeStrategyConfig{}
 	newSut := sut.FillDefaults()
 
-	assert.Equal(t, config.DefaultMergeStrategyType, newSut.Type,
+	assert.Equal(t, config.DefaultMergeStrategyType, newSut.Strategy,
 		fmt.Sprintf("merge strategy type should be set to %s if the provided value is empty", config.DefaultMergeStrategyType))
 }
