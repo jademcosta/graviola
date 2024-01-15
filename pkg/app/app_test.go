@@ -20,6 +20,49 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func TestOperationalRoutes(t *testing.T) {
+	conf := config.GraviolaConfig{}
+	err := yaml.Unmarshal([]byte(configOneGroupWithOneRemote), &conf)
+	if err != nil {
+		panic(err)
+	}
+
+	mock1 := NewMockRemote(make(map[string]mockRemoteRoute))
+
+	mock1Srv := httptest.NewServer(mock1.mux)
+	defer mock1Srv.Close()
+
+	conf.StoragesConf.Groups[0].Servers[0].Address = mock1Srv.URL
+
+	app := app.NewApp(conf)
+	go func() {
+		app.Start()
+	}()
+
+	defer app.Stop()
+
+	testCases := []struct {
+		path       string
+		statusCode int
+	}{
+		{"/metrics", http.StatusOK},
+		{"/ready", http.StatusOK},
+		{"/healthy", http.StatusOK},
+	}
+
+	time.Sleep(500 * time.Millisecond)
+
+	mock1.fixedStatusCodeAnswer = http.StatusBadRequest
+
+	for _, tc := range testCases {
+
+		resp, err := http.Get(fmt.Sprintf("http://localhost:8091%s", tc.path))
+		assert.NoError(t, err, "request should return no error")
+
+		assert.Equal(t, tc.statusCode, resp.StatusCode, "HTTP status should be %d", tc.statusCode)
+	}
+}
+
 func TestIntegrationAnswers422OnRemoteError(t *testing.T) {
 
 	conf := config.GraviolaConfig{}
@@ -40,9 +83,7 @@ func TestIntegrationAnswers422OnRemoteError(t *testing.T) {
 		app.Start()
 	}()
 
-	defer func() {
-		app.Stop()
-	}()
+	defer app.Stop()
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -109,9 +150,7 @@ func TestIntegrationQueryEngineUsesTheLookbackDelta(t *testing.T) {
 		app.Start()
 	}()
 
-	defer func() {
-		app.Stop()
-	}()
+	defer app.Stop()
 
 	time.Sleep(200 * time.Millisecond)
 
@@ -160,9 +199,7 @@ func TestIntegrationSingleRemoteSuccess(t *testing.T) {
 		app.Start()
 	}()
 
-	defer func() {
-		app.Stop()
-	}()
+	defer app.Stop()
 
 	time.Sleep(200 * time.Millisecond)
 
