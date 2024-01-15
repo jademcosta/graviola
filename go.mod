@@ -3,6 +3,7 @@ module github.com/jademcosta/graviola
 go 1.21.1
 
 require (
+	github.com/go-chi/chi/v5 v5.0.11
 	github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd
 	github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/common v0.45.0

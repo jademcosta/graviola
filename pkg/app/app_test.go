@@ -44,7 +44,7 @@ func TestIntegrationAnswers422OnRemoteError(t *testing.T) {
 		app.Stop()
 	}()
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	testCases := []struct {
 		remoteFixedReturn int
@@ -63,6 +63,7 @@ func TestIntegrationAnswers422OnRemoteError(t *testing.T) {
 
 		resp := doRequest("http://localhost:8091/api/v1/query", storage.SelectHints{},
 			labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "HTTP status should be 422")
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -75,7 +76,6 @@ func TestIntegrationAnswers422OnRemoteError(t *testing.T) {
 			panic(err)
 		}
 
-		assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "HTTP status should be 422")
 		assert.Equal(t, "error", respJSON["status"], "response JSON status should be error")
 		assert.Equal(t, "execution", respJSON["errorType"], "response JSON errorType should be execution")
 		assert.Equal(

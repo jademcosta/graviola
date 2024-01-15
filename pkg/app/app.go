@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	grafanaregexp "github.com/grafana/regexp"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
@@ -87,7 +88,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 		otlpEnabled,
 	)
 
-	router := route.New()
+	subRouter := route.New()
 
 	metricRegistry.MustRegister(
 		collectors.NewBuildInfoCollector(),
@@ -96,12 +97,15 @@ func NewApp(conf config.GraviolaConfig) *App {
 			collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
 		),
 	)
-	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
-	router.Get("/healthy", alwaysSuccessfulHandler)
-	router.Get("/ready", alwaysSuccessfulHandler)
+	subRouter.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
+	subRouter.Get("/healthy", alwaysSuccessfulHandler)
+	subRouter.Get("/ready", alwaysSuccessfulHandler)
 
-	router = router.WithPrefix("/api/v1")
-	apiV1.Register(router)
+	subRouter = subRouter.WithPrefix("/api/v1")
+	apiV1.Register(subRouter)
+
+	router := chi.NewRouter()
+	router.Handle("/*", subRouter)
 
 	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.ApiConf.Port), Handler: router} //TODO: extract and allow config
 
