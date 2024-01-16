@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	grafanaregexp "github.com/grafana/regexp"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
@@ -35,6 +36,7 @@ const otlpEnabled = false
 
 type App struct {
 	api     *api_v1.API
+	router  *chi.Mux
 	logger  *slog.Logger
 	metricz *prometheus.Registry
 	Srv     *http.Server
@@ -97,6 +99,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	)
 
 	router := chi.NewRouter()
+	router.Use(middleware.Recoverer)
 
 	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
 	router.Get("/healthy", alwaysSuccessfulHandler)
@@ -111,6 +114,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	return &App{
 		api:     apiV1,
+		router:  router,
 		logger:  logger,
 		metricz: metricRegistry,
 		Srv:     srv,
