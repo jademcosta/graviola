@@ -88,8 +88,6 @@ func NewApp(conf config.GraviolaConfig) *App {
 		otlpEnabled,
 	)
 
-	subRouter := route.New()
-
 	metricRegistry.MustRegister(
 		collectors.NewBuildInfoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
@@ -97,14 +95,16 @@ func NewApp(conf config.GraviolaConfig) *App {
 			collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
 		),
 	)
-	subRouter.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
-	subRouter.Get("/healthy", alwaysSuccessfulHandler)
-	subRouter.Get("/ready", alwaysSuccessfulHandler)
-
-	subRouter = subRouter.WithPrefix("/api/v1")
-	apiV1.Register(subRouter)
 
 	router := chi.NewRouter()
+
+	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
+	router.Get("/healthy", alwaysSuccessfulHandler)
+	router.Get("/ready", alwaysSuccessfulHandler)
+
+	subRouter := route.New()
+	subRouter = subRouter.WithPrefix("/api/v1")
+	apiV1.Register(subRouter)
 	router.Handle("/*", subRouter)
 
 	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.ApiConf.Port), Handler: router} //TODO: extract and allow config
