@@ -16,6 +16,7 @@ import (
 	grafanaregexp "github.com/grafana/regexp"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
+	"github.com/jademcosta/graviola/pkg/http/httpmiddleware"
 	"github.com/jademcosta/graviola/pkg/o11y"
 	"github.com/jademcosta/graviola/pkg/queryengine"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
@@ -99,6 +100,8 @@ func NewApp(conf config.GraviolaConfig) *App {
 	)
 
 	router := chi.NewRouter()
+
+	router.Use(httpmiddleware.NewLoggingMiddleware(logger))
 	router.Use(middleware.Recoverer)
 
 	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
