@@ -102,6 +102,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	router := chi.NewRouter()
 
 	router.Use(httpmiddleware.NewLoggingMiddleware(logger))
+	router.Use(httpmiddleware.NewMetricsMiddleware(metricRegistry))
 	router.Use(middleware.Recoverer)
 
 	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
