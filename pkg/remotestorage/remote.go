@@ -22,6 +22,7 @@ import (
 	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
 
+const DefaultLabelNamesPath = "/api/v1/labels"
 const DefaultInstantQueryPath = "/api/v1/query"
 const DefaultRangeQueryPath = "/api/v1/query_range"
 const DefaultStep = 30 //30 seconds
@@ -151,6 +152,7 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		}
 	}
 
+	//TODO: is it possible to skip the reencoding using *json.RawMessage or something like that
 	reencodedData, err := json.Marshal(responseFromServer.Data)
 	if err != nil {
 		e := fmt.Errorf("error when reencoding data part of response: %w", err)
@@ -203,9 +205,69 @@ func (rStorage *RemoteStorage) LabelValues(ctx context.Context, name string, mat
 //	// LabelNames returns all the unique label names present in the block in sorted order.
 //	// If matchers are specified the returned result set is reduced
 //	// to label names of metrics matching the matchers.
-func (rStorage *RemoteStorage) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	//TODO: implement me
-	return []string{"myownlabelnames"}, map[string]error{}, nil
+func (rStorage *RemoteStorage) LabelNames(
+	ctx context.Context,
+	matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
+
+	params := make([]string, len(matchers))
+	for idx, m := range matchers {
+		params[idx] = "match[]=" + url.QueryEscape(m.String())
+	}
+
+	reqBody := strings.Join(params, "&")
+
+	req, err := http.NewRequest(http.MethodPost, rStorage.URLs["label_names"], strings.NewReader(reqBody))
+	if err != nil {
+		e := fmt.Errorf("error creating request: %w", err)
+		rStorage.logg.Error("request creation", "error", e)
+		return []string{}, map[string]error{"remote_storage": e}, e
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
+		"body", reqBody, "method", req.Method)
+
+	resp, err := rStorage.client.Do(req)
+	if err != nil {
+		e := fmt.Errorf("error making request: %w", err)
+		rStorage.logg.Error("request making", "error", e)
+		return []string{}, map[string]error{"remote_storage": e}, e
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		e := fmt.Errorf("error reading request body: %w", err)
+		rStorage.logg.Error("request body reading", "error", e)
+		return []string{}, map[string]error{"remote_storage": e}, e
+	}
+
+	rStorage.logg.Debug("remote response", "body", string(data), "headers", resp.Header)
+
+	if !responseSuccessful(resp.StatusCode) {
+		e := fmt.Errorf("server answered with non-succesful status code %d", resp.StatusCode)
+		rStorage.logg.Error("non-successful status code", "error", e)
+
+		return []string{}, map[string]error{"remote_storage": e}, e
+	}
+
+	response := &LabelNamesResponse{}
+	err = json.Unmarshal(data, response)
+	if err != nil {
+		e := fmt.Errorf("error reading request body: %w", err)
+		rStorage.logg.Error("request body reading", "error", e)
+		return []string{}, map[string]error{"remote_storage": e}, e
+	}
+
+	if response.Status == prometheusStatusError {
+		e := fmt.Errorf("parsed response informed failure: %s", response.Error)
+		rStorage.logg.Error("answer informed failure", "error", e)
+		return []string{}, map[string]error{"remote_storage": e}, e
+	}
+
+	return response.Data, map[string]error{}, nil
 }
 
 func (rStorage *RemoteStorage) parseTimeSeriesData(data []byte, sorted bool) *domain.GraviolaSeriesSet {
@@ -311,6 +373,7 @@ func generateURLs(conf config.RemoteConfig, logg *slog.Logger) map[string]string
 
 	result["instant_query"] = urlJoin(base, DefaultInstantQueryPath)
 	result["range_query"] = urlJoin(base, DefaultRangeQueryPath)
+	result["label_names"] = urlJoin(base, DefaultLabelNamesPath)
 
 	return result
 }
