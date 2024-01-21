@@ -3,6 +3,7 @@ package remotestorage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -156,18 +157,25 @@ func (rStorage *RemoteStorage) LabelNames(
 	}
 
 	reqBody := strings.Join(params, "&")
+	annots := *annotations.New()
 
-	response, err := rStorage.doRequest(rStorage.URLs["label_names"], reqBody)
+	responseFromServer, err := rStorage.doRequest(rStorage.URLs["label_names"], reqBody)
 	if err != nil {
-		return []string{}, map[string]error{"remote_storage": err}, err
+		return []string{}, annots.Add(err), err
 	}
 
-	names, err := rStorage.parseLabelStringSlice(response.Data)
+	names, err := rStorage.parseLabelStringSlice(responseFromServer.Data)
 	if err != nil {
-		return []string{}, map[string]error{"remote_storage": err}, err
+		return []string{}, annots.Add(err), err
 	}
 
-	return names, map[string]error{}, nil
+	if len(responseFromServer.Warnings) > 0 {
+		for _, w := range responseFromServer.Warnings {
+			annots.Add(errors.New(w))
+		}
+	}
+
+	return names, annots, nil
 }
 
 func (rStorage *RemoteStorage) doRequest(url string, payload string) (*api_v1.Response, error) {

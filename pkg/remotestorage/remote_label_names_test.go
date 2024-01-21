@@ -2,6 +2,7 @@ package remotestorage_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
 	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -151,6 +153,51 @@ func generateQueryParams(matchers []*labels.Matcher) string {
 	return strings.TrimRight(builder.String(), "&")
 }
 
-//TODO: tests
-// Test annotations on error
-//TODO: check on Prometheus if it can return something I didn't expect to
+func TestWarningsAreTurnedIntoAnnotations(t *testing.T) {
+	testCases := []struct {
+		response string
+		expected annotations.Annotations
+	}{
+		{
+			`{"status":"success","data":["__name__"],"warnings":["something went awfuly wrong"]}`,
+			annotations.Annotations(map[string]error{"something went awfuly wrong": errors.New("something went awfuly wrong")}),
+		},
+		{
+			`{"status":"success","data":["__name__"],"warnings":["something went awfuly wrong", "agaaaain"]}`,
+			annotations.Annotations(map[string]error{
+				"something went awfuly wrong": errors.New("something went awfuly wrong"),
+				"agaaaain":                    errors.New("agaaaain"),
+			}),
+		},
+		{
+			`{"status":"success","data":["__name__"],"warnings":[]}`,
+			annotations.Annotations(map[string]error{}),
+		},
+	}
+
+	for _, tc := range testCases {
+		mockRemote := MockRemote{
+			mux: http.NewServeMux(),
+		}
+
+		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(tc.response))
+			panicOnError(err)
+		})
+
+		remoteSrv := httptest.NewServer(mockRemote.mux)
+
+		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+		_, annots, err := sut.LabelNames(context.Background())
+		assert.NoError(t, err, "should have returned NO error")
+		assert.Equal(
+			t,
+			tc.expected,
+			annots,
+			"annotations should match",
+		)
+
+		remoteSrv.Close()
+	}
+}
