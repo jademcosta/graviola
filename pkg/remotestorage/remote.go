@@ -85,51 +85,11 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		urlForQuery = rStorage.URLs["range_query"]
 	}
 
-	req, err := http.NewRequest(http.MethodPost, urlForQuery, strings.NewReader(params.Encode()))
+	data, err := rStorage.doRequest(urlForQuery, params.Encode())
 	if err != nil {
-		e := fmt.Errorf("error creating request: %w", err)
-		rStorage.logg.Error("request creation", "error", e)
 		return &domain.GraviolaSeriesSet{
-			Erro:   e,
-			Annots: map[string]error{"remote_storage": e},
-		}
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
-		"body", params.Encode(), "method", req.Method)
-
-	resp, err := rStorage.client.Do(req)
-	if err != nil {
-		e := fmt.Errorf("error making request: %w", err)
-		rStorage.logg.Error("request making", "error", e)
-		return &domain.GraviolaSeriesSet{
-			Erro:   e,
-			Annots: map[string]error{"remote_storage": e},
-		}
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		e := fmt.Errorf("error reading request body: %w", err)
-		rStorage.logg.Error("request body reading", "error", e)
-		return &domain.GraviolaSeriesSet{
-			Erro:   e,
-			Annots: map[string]error{"remote_storage": e},
-		}
-	}
-
-	rStorage.logg.Debug("remote response", "body", string(data), "headers", resp.Header)
-
-	if !responseSuccessful(resp.StatusCode) {
-		e := fmt.Errorf("server answered with non-succesful status code %d", resp.StatusCode)
-		rStorage.logg.Error("non-successful status code", "error", e)
-
-		return &domain.GraviolaSeriesSet{
-			Erro:   e,
-			Annots: map[string]error{"remote_storage": e},
+			Erro:   err,
+			Annots: map[string]error{"remote_storage": err},
 		}
 	}
 
@@ -179,6 +139,46 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 	}
 
 	return responseTSData
+}
+
+func (rStorage *RemoteStorage) doRequest(url string, payload string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+	if err != nil {
+		e := fmt.Errorf("error creating request: %w", err)
+		rStorage.logg.Error("request creation", "error", e)
+		return nil, e
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
+		"body", payload, "method", req.Method)
+
+	resp, err := rStorage.client.Do(req)
+	if err != nil {
+		e := fmt.Errorf("error making request: %w", err)
+		rStorage.logg.Error("request making", "error", e)
+		return nil, e
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		e := fmt.Errorf("error reading request body: %w", err)
+		rStorage.logg.Error("request body reading", "error", e)
+		return nil, e
+	}
+
+	rStorage.logg.Debug("remote response", "body", string(data), "headers", resp.Header)
+
+	if !responseSuccessful(resp.StatusCode) {
+		e := fmt.Errorf("server answered with non-succesful status code %d", resp.StatusCode)
+		rStorage.logg.Error("non-successful status code", "error", e)
+
+		return nil, e
+	}
+
+	return data, nil
 }
 
 // LabelQuerier
