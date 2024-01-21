@@ -85,21 +85,11 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		urlForQuery = rStorage.URLs["range_query"]
 	}
 
-	data, err := rStorage.doRequest(urlForQuery, params.Encode())
+	responseFromServer, err := rStorage.doRequest(urlForQuery, params.Encode())
 	if err != nil {
 		return &domain.GraviolaSeriesSet{
 			Erro:   err,
 			Annots: map[string]error{"remote_storage": err},
-		}
-	}
-
-	responseFromServer, err := parseResponse(data)
-	if err != nil {
-		e := fmt.Errorf("unable to parse server response %w", err)
-		rStorage.logg.Error("unable to parse response", "error", e)
-		return &domain.GraviolaSeriesSet{
-			Erro:   e,
-			Annots: map[string]error{"remote_storage": e},
 		}
 	}
 
@@ -112,7 +102,7 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		}
 	}
 
-	//TODO: is it possible to skip the reencoding using *json.RawMessage or something like that
+	//TODO: is it possible to skip the reencoding using *json.RawMessage or something like that?
 	reencodedData, err := json.Marshal(responseFromServer.Data)
 	if err != nil {
 		e := fmt.Errorf("error when reencoding data part of response: %w", err)
@@ -141,7 +131,7 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 	return responseTSData
 }
 
-func (rStorage *RemoteStorage) doRequest(url string, payload string) ([]byte, error) {
+func (rStorage *RemoteStorage) doRequest(url string, payload string) (*api_v1.Response, error) {
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
 	if err != nil {
 		e := fmt.Errorf("error creating request: %w", err)
@@ -178,7 +168,14 @@ func (rStorage *RemoteStorage) doRequest(url string, payload string) ([]byte, er
 		return nil, e
 	}
 
-	return data, nil
+	responseFromServer, err := parseResponse(data)
+	if err != nil {
+		e := fmt.Errorf("error parsing response from remote: %w", err)
+		rStorage.logg.Error("parsing response body", "error", e)
+		return nil, e
+	}
+
+	return responseFromServer, nil
 }
 
 // LabelQuerier
@@ -217,17 +214,9 @@ func (rStorage *RemoteStorage) LabelNames(
 
 	reqBody := strings.Join(params, "&")
 
-	data, err := rStorage.doRequest(rStorage.URLs["label_names"], reqBody)
+	response, err := rStorage.doRequest(rStorage.URLs["label_names"], reqBody)
 	if err != nil {
 		return []string{}, map[string]error{"remote_storage": err}, err
-	}
-
-	response := &LabelNamesResponse{}
-	err = json.Unmarshal(data, response)
-	if err != nil {
-		e := fmt.Errorf("error reading request body: %w", err)
-		rStorage.logg.Error("request body reading", "error", e)
-		return []string{}, map[string]error{"remote_storage": e}, e
 	}
 
 	if response.Status == prometheusStatusError {
@@ -236,7 +225,30 @@ func (rStorage *RemoteStorage) LabelNames(
 		return []string{}, map[string]error{"remote_storage": e}, e
 	}
 
-	return response.Data, map[string]error{}, nil
+	names, err := rStorage.parseLabelStringSlice(response.Data)
+	if err != nil {
+		return []string{}, map[string]error{"remote_storage": err}, err
+	}
+
+	return names, map[string]error{}, nil
+}
+
+func (rStorage *RemoteStorage) parseLabelStringSlice(data interface{}) ([]string, error) {
+
+	unparsed, err := json.Marshal(data)
+	if err != nil {
+		rStorage.logg.Error("reencoding data", "error", err)
+		return nil, err
+	}
+
+	result := make([]string, 0)
+	err = json.Unmarshal(unparsed, &result)
+	if err != nil {
+		rStorage.logg.Error("parsing data", "error", err)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (rStorage *RemoteStorage) parseTimeSeriesData(data []byte, sorted bool) *domain.GraviolaSeriesSet {
