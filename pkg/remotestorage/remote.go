@@ -217,40 +217,9 @@ func (rStorage *RemoteStorage) LabelNames(
 
 	reqBody := strings.Join(params, "&")
 
-	req, err := http.NewRequest(http.MethodPost, rStorage.URLs["label_names"], strings.NewReader(reqBody))
+	data, err := rStorage.doRequest(rStorage.URLs["label_names"], reqBody)
 	if err != nil {
-		e := fmt.Errorf("error creating request: %w", err)
-		rStorage.logg.Error("request creation", "error", e)
-		return []string{}, map[string]error{"remote_storage": e}, e
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
-		"body", reqBody, "method", req.Method)
-
-	resp, err := rStorage.client.Do(req)
-	if err != nil {
-		e := fmt.Errorf("error making request: %w", err)
-		rStorage.logg.Error("request making", "error", e)
-		return []string{}, map[string]error{"remote_storage": e}, e
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		e := fmt.Errorf("error reading request body: %w", err)
-		rStorage.logg.Error("request body reading", "error", e)
-		return []string{}, map[string]error{"remote_storage": e}, e
-	}
-
-	rStorage.logg.Debug("remote response", "body", string(data), "headers", resp.Header)
-
-	if !responseSuccessful(resp.StatusCode) {
-		e := fmt.Errorf("server answered with non-succesful status code %d", resp.StatusCode)
-		rStorage.logg.Error("non-successful status code", "error", e)
-
-		return []string{}, map[string]error{"remote_storage": e}, e
+		return []string{}, map[string]error{"remote_storage": err}, err
 	}
 
 	response := &LabelNamesResponse{}
