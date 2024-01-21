@@ -93,16 +93,6 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		}
 	}
 
-	if responseFromServer.Status == prometheusStatusError {
-		e := fmt.Errorf("parsed response informed failure %s", responseFromServer.Error)
-		rStorage.logg.Error("answer informed failure", "error", e)
-		return &domain.GraviolaSeriesSet{
-			Erro:   e,
-			Annots: map[string]error{"remote_storage": e},
-		}
-	}
-
-	//TODO: is it possible to skip the reencoding using *json.RawMessage or something like that?
 	reencodedData, err := json.Marshal(responseFromServer.Data)
 	if err != nil {
 		e := fmt.Errorf("error when reencoding data part of response: %w", err)
@@ -172,12 +162,6 @@ func (rStorage *RemoteStorage) LabelNames(
 		return []string{}, map[string]error{"remote_storage": err}, err
 	}
 
-	if response.Status == prometheusStatusError {
-		e := fmt.Errorf("parsed response informed failure: %s", response.Error)
-		rStorage.logg.Error("answer informed failure", "error", e)
-		return []string{}, map[string]error{"remote_storage": e}, e
-	}
-
 	names, err := rStorage.parseLabelStringSlice(response.Data)
 	if err != nil {
 		return []string{}, map[string]error{"remote_storage": err}, err
@@ -227,6 +211,12 @@ func (rStorage *RemoteStorage) doRequest(url string, payload string) (*api_v1.Re
 	if err != nil {
 		e := fmt.Errorf("error parsing response from remote: %w", err)
 		rStorage.logg.Error("parsing response body", "error", e)
+		return nil, e
+	}
+
+	if responseFromServer.Status == prometheusStatusError {
+		e := fmt.Errorf("parsed response informed failure %s", responseFromServer.Error)
+		rStorage.logg.Error("answer informed failure", "error", e)
 		return nil, e
 	}
 
