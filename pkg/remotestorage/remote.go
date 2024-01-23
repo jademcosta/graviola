@@ -23,6 +23,7 @@ import (
 	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
 
+const DefaultLabelValuesPath = "/api/v1/label/%s/values"
 const DefaultLabelNamesPath = "/api/v1/labels"
 const DefaultInstantQueryPath = "/api/v1/query"
 const DefaultRangeQueryPath = "/api/v1/query_range"
@@ -30,7 +31,7 @@ const DefaultStep = 30 //30 seconds
 
 type RemoteStorage struct {
 	logg   *slog.Logger
-	URLs   map[string]string
+	URLs   map[string]string //TODO: I probably don't need this anymore
 	client *http.Client
 	now    func() time.Time
 }
@@ -86,7 +87,22 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		urlForQuery = rStorage.URLs["range_query"]
 	}
 
-	responseFromServer, err := rStorage.doRequest(urlForQuery, params.Encode())
+	req, err := http.NewRequest(http.MethodPost, urlForQuery, strings.NewReader(params.Encode()))
+	if err != nil {
+		e := fmt.Errorf("error creating request: %w", err)
+		rStorage.logg.Error("request creation", "error", e)
+		return &domain.GraviolaSeriesSet{
+			Erro:   e,
+			Annots: map[string]error{"remote_storage": e},
+		}
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
+		"body", params.Encode(), "method", req.Method)
+
+	responseFromServer, err := rStorage.doRequest(req)
 	if err != nil {
 		return &domain.GraviolaSeriesSet{
 			Erro:   err,
@@ -136,30 +152,38 @@ func (rStorage *RemoteStorage) Close() error {
 //	// It is not safe to use the strings beyond the lifetime of the querier.
 //	// If matchers are specified the returned result set is reduced
 //	// to label values of metrics matching the matchers.
-func (rStorage *RemoteStorage) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	//TODO: implement me
-	return []string{"myownlabelval"}, map[string]error{}, nil
-}
-
-// LabelQuerier
-//
-//	// LabelNames returns all the unique label names present in the block in sorted order.
-//	// If matchers are specified the returned result set is reduced
-//	// to label names of metrics matching the matchers.
-func (rStorage *RemoteStorage) LabelNames(
+func (rStorage *RemoteStorage) LabelValues(
 	ctx context.Context,
+	name string,
 	matchers ...*labels.Matcher,
 ) ([]string, annotations.Annotations, error) {
+
+	//TODO: use context
 
 	params := make([]string, len(matchers))
 	for idx, m := range matchers {
 		params[idx] = "match[]=" + url.QueryEscape(m.String())
 	}
 
-	reqBody := strings.Join(params, "&")
+	reqParams := strings.Join(params, "&")
 	annots := *annotations.New()
 
-	responseFromServer, err := rStorage.doRequest(rStorage.URLs["label_names"], reqBody)
+	urlForQuery := fmt.Sprintf(rStorage.URLs["label_values"], name)
+	urlForQuery = urlForQuery + "?" + reqParams
+
+	req, err := http.NewRequest(http.MethodGet, urlForQuery, nil)
+	if err != nil {
+		e := fmt.Errorf("error creating request: %w", err)
+		rStorage.logg.Error("request creation", "error", e)
+		return []string{}, annots.Add(err), err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
+		"params", reqParams, "method", req.Method)
+
+	responseFromServer, err := rStorage.doRequest(req)
 	if err != nil {
 		return []string{}, annots.Add(err), err
 	}
@@ -178,19 +202,57 @@ func (rStorage *RemoteStorage) LabelNames(
 	return names, annots, nil
 }
 
-func (rStorage *RemoteStorage) doRequest(url string, payload string) (*api_v1.Response, error) {
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+// LabelQuerier
+//
+//	// LabelNames returns all the unique label names present in the block in sorted order.
+//	// If matchers are specified the returned result set is reduced
+//	// to label names of metrics matching the matchers.
+func (rStorage *RemoteStorage) LabelNames(
+	ctx context.Context,
+	matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
+	//TODO: use context
+
+	params := make([]string, len(matchers))
+	for idx, m := range matchers {
+		params[idx] = "match[]=" + url.QueryEscape(m.String())
+	}
+
+	reqBody := strings.Join(params, "&")
+	annots := *annotations.New()
+
+	req, err := http.NewRequest(http.MethodPost, rStorage.URLs["label_names"], strings.NewReader(reqBody))
 	if err != nil {
 		e := fmt.Errorf("error creating request: %w", err)
 		rStorage.logg.Error("request creation", "error", e)
-		return nil, e
+		return []string{}, annots.Add(err), err
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	rStorage.logg.Debug("performing request", "url", req.URL.String(), "headers", req.Header,
-		"body", payload, "method", req.Method)
+		"body", reqBody, "method", req.Method)
 
+	responseFromServer, err := rStorage.doRequest(req)
+	if err != nil {
+		return []string{}, annots.Add(err), err
+	}
+
+	names, err := rStorage.parseLabelStringSlice(responseFromServer.Data)
+	if err != nil {
+		return []string{}, annots.Add(err), err
+	}
+
+	if len(responseFromServer.Warnings) > 0 {
+		for _, w := range responseFromServer.Warnings {
+			annots.Add(errors.New(w))
+		}
+	}
+
+	return names, annots, nil
+}
+
+func (rStorage *RemoteStorage) doRequest(req *http.Request) (*api_v1.Response, error) {
 	resp, err := rStorage.client.Do(req)
 	if err != nil {
 		e := fmt.Errorf("error making request: %w", err)
@@ -353,6 +415,7 @@ func generateURLs(conf config.RemoteConfig, logg *slog.Logger) map[string]string
 	result["instant_query"] = urlJoin(base, DefaultInstantQueryPath)
 	result["range_query"] = urlJoin(base, DefaultRangeQueryPath)
 	result["label_names"] = urlJoin(base, DefaultLabelNamesPath)
+	result["label_values"] = urlJoin(base, DefaultLabelValuesPath)
 
 	return result
 }

@@ -3,6 +3,7 @@ package remotestorage_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
 	"github.com/prometheus/prometheus/model/labels"
@@ -17,16 +19,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const labelNamesResponse = `{"status":"success","data":[{{LABELS}}]}`
+const labelValuesResponse = `{"status":"success","data":[{{VALUES}}]}`
 
-func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
+func TestCorrectlyParsesLabelValuesSuccessResponse(t *testing.T) {
 
 	testCases := []struct {
 		labels []string
 	}{
 		{[]string{"__name__", "address", "endpoint", "event", "handler", "id", "instance", "interval", "job", "le", "listener_name", "machine", "major", "method", "minor", "mode", "mountpoint", "name", "nodename"}},
 		{[]string{}},
-		{[]string{"single_label_name"}},
+		{[]string{"single_label_value"}},
+		{[]string{"localhost:9090", "localhost:9100"}},
 	}
 
 	for _, tc := range testCases {
@@ -34,7 +37,7 @@ func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			var content string
 			if len(tc.labels) > 0 {
@@ -43,7 +46,7 @@ func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 				content = ""
 			}
 
-			responseBody := strings.ReplaceAll(labelNamesResponse, "{{LABELS}}", content)
+			responseBody := strings.ReplaceAll(labelValuesResponse, "{{VALUES}}", content)
 
 			_, err := w.Write([]byte(responseBody))
 			panicOnError(err)
@@ -52,7 +55,7 @@ func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		result, annotations, err := sut.LabelNames(context.Background())
+		result, annotations, err := sut.LabelValues(context.Background(), "any-name")
 		assert.NoError(t, err, "should have returned no error")
 		assert.Len(t, annotations.AsErrors(), 0, "should have no annotations")
 
@@ -63,14 +66,14 @@ func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 	}
 }
 
-func TestKnowsHowToDealWithLabelNamesRemoteErrors(t *testing.T) {
+func TestLabelValuesKnowsHowToDealWithRemoteErrors(t *testing.T) {
 
 	testCases := []struct {
 		response       string
 		responseStatus int
 	}{
-		{labelNamesResponse, 400},
-		{labelNamesResponse, 500},
+		{labelValuesResponse, 400},
+		{labelValuesResponse, 500},
 		{`{"status":"error","data":["__name__","address","endpoint"]}`, 200},
 		{`{"status":"success","data":["__name__",}`, 200},
 		{`{"st`, 200},
@@ -81,7 +84,7 @@ func TestKnowsHowToDealWithLabelNamesRemoteErrors(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(tc.responseStatus)
 			_, err := w.Write([]byte(tc.response))
 			panicOnError(err)
@@ -98,24 +101,24 @@ func TestKnowsHowToDealWithLabelNamesRemoteErrors(t *testing.T) {
 	}
 }
 
-func TestLabelNamesParametersAreSentToRemote(t *testing.T) {
+func TestLabelValuesParametersAreSentToRemote(t *testing.T) {
 
-	var calledWith string
-	mockRemote := MockRemote{
-		mux: http.NewServeMux(),
-	}
+	var calledWithParams string
+	var calledWithLabelName string
+	mux := chi.NewMux()
 
-	mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(fmt.Sprintf(remotestorage.DefaultLabelValuesPath, "{labelname}"), func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte(`{"status":"success","data":["hi"]}`))
 		assert.NoError(t, err, "should return no error")
 
 		w.WriteHeader(http.StatusOK)
 		err = r.ParseForm()
 		assert.NoError(t, err, "should return no error")
-		calledWith = r.Form.Encode()
+		calledWithParams = r.Form.Encode()
+		calledWithLabelName = chi.URLParam(r, "labelname")
 	})
 
-	remoteSrv := httptest.NewServer(mockRemote.mux)
+	remoteSrv := httptest.NewServer(mux)
 	defer remoteSrv.Close()
 
 	matchers := []*labels.Matcher{
@@ -124,32 +127,33 @@ func TestLabelNamesParametersAreSentToRemote(t *testing.T) {
 	}
 
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-	_, _, err := sut.LabelNames(context.Background(), matchers...)
+	_, _, err := sut.LabelValues(context.Background(), "some-random-name", matchers...)
 	assert.NoError(t, err, "should return no error")
 
-	result, err := url.QueryUnescape(calledWith)
+	paramsResult, err := url.QueryUnescape(calledWithParams)
 	assert.NoError(t, err, "should return no error")
-	assert.Equal(t, generateQueryParams(matchers), result, "query params should match")
+	assert.Equal(t, generateQueryParams(matchers), paramsResult, "query params should match")
+	assert.Equal(t, "some-random-name", calledWithLabelName, "query params should match")
 }
 
-func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
+func TestLabelValuesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 	testCases := []struct {
 		response string
 		expected annotations.Annotations
 	}{
 		{
-			`{"status":"success","data":["__name__"],"warnings":["something went awfuly wrong"]}`,
+			`{"status":"success","data":["localhost:9090"],"warnings":["something went awfuly wrong"]}`,
 			annotations.Annotations(map[string]error{"something went awfuly wrong": errors.New("something went awfuly wrong")}),
 		},
 		{
-			`{"status":"success","data":["__name__"],"warnings":["something went awfuly wrong", "agaaaain"]}`,
+			`{"status":"success","data":["localhost:9090"],"warnings":["something went awfuly wrong", "agaaaain"]}`,
 			annotations.Annotations(map[string]error{
 				"something went awfuly wrong": errors.New("something went awfuly wrong"),
 				"agaaaain":                    errors.New("agaaaain"),
 			}),
 		},
 		{
-			`{"status":"success","data":["__name__"],"warnings":[]}`,
+			`{"status":"success","data":["localhost:9090"],"warnings":[]}`,
 			annotations.Annotations(map[string]error{}),
 		},
 	}
@@ -159,7 +163,7 @@ func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(tc.response))
 			panicOnError(err)
@@ -168,7 +172,7 @@ func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		_, annots, err := sut.LabelNames(context.Background())
+		_, annots, err := sut.LabelValues(context.Background(), "any-name")
 		assert.NoError(t, err, "should have returned NO error")
 		assert.Equal(
 			t,
@@ -179,25 +183,4 @@ func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 
 		remoteSrv.Close()
 	}
-}
-
-func panicOnError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func generateQueryParams(matchers []*labels.Matcher) string {
-	builder := strings.Builder{}
-
-	for _, matcher := range matchers {
-		_, err := builder.Write([]byte("match[]="))
-		panicOnError(err)
-		_, err = builder.Write([]byte(matcher.String()))
-		panicOnError(err)
-		_, err = builder.Write([]byte("&"))
-		panicOnError(err)
-	}
-
-	return strings.TrimRight(builder.String(), "&")
 }
