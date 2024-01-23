@@ -19,7 +19,7 @@ import (
 
 const labelNamesResponse = `{"status":"success","data":[{{LABELS}}]}`
 
-func TestCorrectlyParsesTheRemoteSuccessfulResponse(t *testing.T) {
+func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 
 	testCases := []struct {
 		labels []string
@@ -63,7 +63,7 @@ func TestCorrectlyParsesTheRemoteSuccessfulResponse(t *testing.T) {
 	}
 }
 
-func TestKnowsHowToDealWithRemoteErrors(t *testing.T) {
+func TestKnowsHowToDealWithLabelNamesRemoteErrors(t *testing.T) {
 
 	testCases := []struct {
 		response       string
@@ -98,7 +98,7 @@ func TestKnowsHowToDealWithRemoteErrors(t *testing.T) {
 	}
 }
 
-func TestParametersAreSentToRemote(t *testing.T) {
+func TestLabelNamesParametersAreSentToRemote(t *testing.T) {
 
 	var calledWith string
 	mockRemote := MockRemote{
@@ -132,7 +132,7 @@ func TestParametersAreSentToRemote(t *testing.T) {
 	assert.Equal(t, generateQueryParams(matchers), result, "query params should match")
 }
 
-func TestWarningsAreTurnedIntoAnnotations(t *testing.T) {
+func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 	testCases := []struct {
 		response string
 		expected annotations.Annotations
