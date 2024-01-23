@@ -128,3 +128,36 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 		assert.Equal(t, tc.expected, sentPayload, "should have sent the correct payload")
 	}
 }
+
+func TestUsesTheContextParameter(t *testing.T) {
+
+	deadline := time.Now().Add(1 * time.Second)
+	ctx, cancelFn := context.WithDeadline(context.Background(), deadline)
+	defer cancelFn()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
+
+		// time.Sleep(200 * time.Millisecond)
+		ddl, ok := ctx.Deadline()
+		assert.True(t, ok, "should have a deadline set")
+		assert.Equal(t, deadline, ddl, "should have the same deadline")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1702174837.986,"77"]}]}}`))
+		panicOnError(err)
+	})
+
+	remoteSrv := httptest.NewServer(mux)
+	defer remoteSrv.Close()
+
+	matchers := []*labels.Matcher{
+		labels.MustNewMatcher(labels.MatchEqual, "labelName", "labelVal"),
+	}
+	hints := &storage.SelectHints{}
+
+	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+
+	result := sut.Select(ctx, true, hints, matchers...)
+	assert.NotNil(t, result, "result should not be nil")
+	time.Sleep(50 * time.Millisecond)
+}

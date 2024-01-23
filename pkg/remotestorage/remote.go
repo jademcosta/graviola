@@ -51,8 +51,6 @@ func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() ti
 // Caller can specify if it requires returned series to be sorted. Prefer not requiring sorting for better performance.
 // It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
 func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
-	//TODO: use context
-
 	promQLQuery, err := ToPromQLQuery(matchers)
 	if err != nil {
 		e := fmt.Errorf("error creating query params: %w", err)
@@ -87,7 +85,7 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 		urlForQuery = rStorage.URLs["range_query"]
 	}
 
-	req, err := http.NewRequest(http.MethodPost, urlForQuery, strings.NewReader(params.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, urlForQuery, strings.NewReader(params.Encode()))
 	if err != nil {
 		e := fmt.Errorf("error creating request: %w", err)
 		rStorage.logg.Error("request creation", "error", e)
@@ -158,8 +156,6 @@ func (rStorage *RemoteStorage) LabelValues(
 	matchers ...*labels.Matcher,
 ) ([]string, annotations.Annotations, error) {
 
-	//TODO: use context
-
 	params := make([]string, len(matchers))
 	for idx, m := range matchers {
 		params[idx] = "match[]=" + url.QueryEscape(m.String())
@@ -171,7 +167,7 @@ func (rStorage *RemoteStorage) LabelValues(
 	urlForQuery := fmt.Sprintf(rStorage.URLs["label_values"], name)
 	urlForQuery = urlForQuery + "?" + reqParams
 
-	req, err := http.NewRequest(http.MethodGet, urlForQuery, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlForQuery, nil)
 	if err != nil {
 		e := fmt.Errorf("error creating request: %w", err)
 		rStorage.logg.Error("request creation", "error", e)
@@ -211,7 +207,6 @@ func (rStorage *RemoteStorage) LabelNames(
 	ctx context.Context,
 	matchers ...*labels.Matcher,
 ) ([]string, annotations.Annotations, error) {
-	//TODO: use context
 
 	params := make([]string, len(matchers))
 	for idx, m := range matchers {
@@ -221,7 +216,7 @@ func (rStorage *RemoteStorage) LabelNames(
 	reqBody := strings.Join(params, "&")
 	annots := *annotations.New()
 
-	req, err := http.NewRequest(http.MethodPost, rStorage.URLs["label_names"], strings.NewReader(reqBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rStorage.URLs["label_names"], strings.NewReader(reqBody))
 	if err != nil {
 		e := fmt.Errorf("error creating request: %w", err)
 		rStorage.logg.Error("request creation", "error", e)
