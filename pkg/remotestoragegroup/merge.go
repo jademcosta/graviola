@@ -137,7 +137,11 @@ func (mq *mergeQuerier) LabelValues(ctx context.Context, name string, matchers .
 
 	for lblResp := range valuesChan {
 		annots.Merge(lblResp.annots)
-		errs = append(errs, lblResp.err)
+		if lblResp.err != nil {
+			errs = append(errs, lblResp.err)
+			annots.Add(lblResp.err)
+		}
+
 		for _, val := range lblResp.values {
 			labelValuesSet[val] = struct{}{}
 		}

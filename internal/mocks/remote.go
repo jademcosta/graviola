@@ -20,6 +20,7 @@ type RemoteStorageMock struct {
 	CalledWithContexts   []context.Context
 	CloseCalled          int
 	Error                error
+	Annots               annotations.Annotations
 	Mu                   sync.Mutex
 }
 
@@ -48,16 +49,21 @@ func (mock *RemoteStorageMock) Close() error {
 }
 
 func (mock *RemoteStorageMock) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+	annots := annotations.New()
+	annots.Merge(mock.Annots)
 
 	mock.CalledWithContexts = append(mock.CalledWithContexts, ctx)
 	mock.CalledWithNames = append(mock.CalledWithNames, name)
 	mock.CalledWithMatchers = append(mock.CalledWithMatchers, matchers)
 
 	lblVals := make([]string, 0)
-	for _, serie := range mock.SeriesSet.Series {
-		for lblName, val := range serie.Lbs.Map() {
-			if lblName == name {
-				lblVals = append(lblVals, val)
+
+	if mock.SeriesSet != nil {
+		for _, serie := range mock.SeriesSet.Series {
+			for lblName, val := range serie.Lbs.Map() {
+				if lblName == name {
+					lblVals = append(lblVals, val)
+				}
 			}
 		}
 	}
@@ -67,18 +73,23 @@ func (mock *RemoteStorageMock) LabelValues(ctx context.Context, name string, mat
 		err = mock.Error
 	}
 
-	return lblVals, map[string]error{}, err
+	return lblVals, *annots, err
 }
 
 func (mock *RemoteStorageMock) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+
+	annots := annotations.New()
+	annots.Merge(mock.Annots)
 
 	mock.CalledWithContexts = append(mock.CalledWithContexts, ctx)
 	mock.CalledWithMatchers = append(mock.CalledWithMatchers, matchers)
 
 	lblNames := make([]string, 0)
-	for _, serie := range mock.SeriesSet.Series {
-		for _, val := range serie.Lbs.Map() {
-			lblNames = append(lblNames, val)
+	if mock.SeriesSet != nil {
+		for _, serie := range mock.SeriesSet.Series {
+			for _, val := range serie.Lbs.Map() {
+				lblNames = append(lblNames, val)
+			}
 		}
 	}
 
@@ -87,5 +98,5 @@ func (mock *RemoteStorageMock) LabelNames(ctx context.Context, matchers ...*labe
 		err = mock.Error
 	}
 
-	return lblNames, map[string]error{}, err
+	return lblNames, *annots, err
 }
