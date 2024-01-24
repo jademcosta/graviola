@@ -4,10 +4,12 @@ import (
 	"context"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/jademcosta/graviola/internal/mocks"
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup/mergestrategy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
@@ -148,4 +150,86 @@ func TestWhenOnlyOneQuerierExistDoesNotCallMerge(t *testing.T) {
 	sut.Select(context.Background(), true, &storage.SelectHints{})
 
 	assert.Len(t, mergeStrategy.calledWith, 0, "should not call Merge() when only 1 querier exists")
+}
+
+func TestLabelValuesSuccessReturn(t *testing.T) {
+	querier1 := &mocks.RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("__name__", "name1")},
+				{Lbs: labels.FromStrings("__name__", "name2")},
+				{Lbs: labels.FromStrings("__name__", "name3")},
+			},
+		},
+	}
+
+	querier2 := &mocks.RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("__name__", "name1")},
+				{Lbs: labels.FromStrings("__name__", "name5", "instance", "localhost:9090")},
+				{Lbs: labels.FromStrings("__name__", "name4")},
+			},
+		},
+	}
+
+	mergeStrategy := &mergestrategy.AlwaysMergeStrategy{}
+	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2}, mergeStrategy)
+
+	vals, _, err := sut.LabelValues(context.Background(), "__name__")
+	assert.NoError(t, err, "should return no error")
+	assert.ElementsMatch(t, []string{"name1", "name2", "name3", "name4", "name5"}, vals,
+		"should return correct label values")
+
+	vals, _, err = sut.LabelValues(context.Background(), "instance")
+	assert.NoError(t, err, "should return no error")
+	assert.ElementsMatch(t, []string{"localhost:9090"}, vals,
+		"should return correct label values")
+
+	sut = remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1}, mergeStrategy)
+
+	vals, _, err = sut.LabelValues(context.Background(), "__name__")
+	assert.NoError(t, err, "should return no error")
+	assert.ElementsMatch(t, []string{"name1", "name2", "name3"}, vals, "should return correct label values")
+
+	vals, _, err = sut.LabelValues(context.Background(), "instance")
+	assert.NoError(t, err, "should return no error")
+	assert.ElementsMatch(t, []string{}, vals,
+		"should return empty when it does not have the label name equivalent")
+}
+
+func TestLabelValuesSendsTheQueryToAllRemotes(t *testing.T) {
+	querier1 := &mocks.RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("__name__", "name1")},
+			},
+		},
+	}
+
+	querier2 := &mocks.RemoteStorageMock{
+		SeriesSet: &domain.GraviolaSeriesSet{
+			Series: []*domain.GraviolaSeries{
+				{Lbs: labels.FromStrings("__name__", "name5", "instance", "localhost:9090")},
+			},
+		},
+	}
+
+	mergeStrategy := &mergestrategy.AlwaysMergeStrategy{}
+	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2}, mergeStrategy)
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancelFn()
+	matchers := []*labels.Matcher{
+		{Type: labels.MatchEqual, Name: "name1", Value: "val1"},
+		{Type: labels.MatchEqual, Name: "name2", Value: "val2"},
+	}
+	_, _, _ = sut.LabelValues(ctx, "__name__", matchers...)
+	assert.Equal(t, ctx, querier1.CalledWithContexts[0], "should have passed the context to remotes")
+	assert.Equal(t, "__name__", querier1.CalledWithNames[0], "should have passed the name to remotes")
+	assert.Equal(t, matchers, querier1.CalledWithMatchers[0], "should have passed the matchers to remotes")
+
+	assert.Equal(t, ctx, querier2.CalledWithContexts[0], "should have passed the context to remotes")
+	assert.Equal(t, "__name__", querier2.CalledWithNames[0], "should have passed the name to remotes")
+	assert.Equal(t, matchers, querier2.CalledWithMatchers[0], "should have passed the matchers to remotes")
 }
