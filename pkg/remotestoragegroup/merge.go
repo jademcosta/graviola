@@ -71,7 +71,6 @@ func (mq *mergeQuerier) Select(ctx context.Context, sortSeries bool, hints *stor
 		seriesSets = append(seriesSets, r)
 	}
 
-	//TODO: check if context is cancelled
 	response := mq.seriesSetMerger.Merge(seriesSets)
 	return response
 }
@@ -105,10 +104,15 @@ func (mq *mergeQuerier) LabelValues(ctx context.Context, name string, matchers .
 	}
 
 	if len(mq.queriers) == 1 {
-		return mq.queriers[0].LabelValues(ctx, name, matchers...)
+		values, annots, err := mq.queriers[0].LabelValues(ctx, name, matchers...)
+		if err != nil {
+			return values, annots, err
+		} else {
+			return dedupe(values), annots, err
+		}
+
 	}
 
-	labelValuesSet := make(map[string]struct{})
 	errs := make([]error, 0)
 	annots := annotations.New()
 
@@ -135,30 +139,23 @@ func (mq *mergeQuerier) LabelValues(ctx context.Context, name string, matchers .
 		close(valuesChan)
 	}()
 
+	values := make([]string, 0)
 	for lblResp := range valuesChan {
 		annots.Merge(lblResp.annots)
 		if lblResp.err != nil {
 			errs = append(errs, lblResp.err)
 			annots.Add(lblResp.err)
+			continue
 		}
 
-		for _, val := range lblResp.values {
-			labelValuesSet[val] = struct{}{}
-		}
-	}
-
-	valuesDeduped := make([]string, 0, len(labelValuesSet))
-	for val := range labelValuesSet {
-		valuesDeduped = append(valuesDeduped, val)
+		values = append(values, lblResp.values...)
 	}
 
 	var err error = nil
 	if len(errs) > 0 {
 		err = errs[0]
 	}
-
-	//TODO: check if context is cancelled
-	return valuesDeduped, *annots, err
+	return dedupe(values), *annots, err
 }
 
 // LabelQuerier
@@ -166,6 +163,73 @@ func (mq *mergeQuerier) LabelValues(ctx context.Context, name string, matchers .
 // If matchers are specified the returned result set is reduced
 // to label names of metrics matching the matchers.
 func (mq *mergeQuerier) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	//TODO: implement me
-	return []string{"myownlabelnames"}, map[string]error{}, nil
+	if len(mq.queriers) == 0 {
+		return []string{}, map[string]error{}, nil
+	}
+
+	if len(mq.queriers) == 1 {
+		vals, annots, err := mq.queriers[0].LabelNames(ctx, matchers...)
+		if err != nil {
+			return vals, annots, err
+		} else {
+			return dedupe(vals), annots, err
+		}
+	}
+
+	errs := make([]error, 0)
+	annots := annotations.New()
+
+	var wg sync.WaitGroup
+	valuesChan := make(chan *labelResponse)
+
+	wg.Add(len(mq.queriers))
+	for _, querier := range mq.queriers {
+		go func(qr storage.Querier) {
+
+			defer wg.Done()
+			values, annotationsResponse, err := qr.LabelNames(ctx, matchers...)
+
+			valuesChan <- &labelResponse{
+				values: values,
+				annots: annotationsResponse,
+				err:    err,
+			}
+		}(querier)
+	}
+
+	go func() {
+		wg.Wait()
+		close(valuesChan)
+	}()
+
+	values := make([]string, 0)
+	for lblResp := range valuesChan {
+		annots.Merge(lblResp.annots)
+		if lblResp.err != nil {
+			errs = append(errs, lblResp.err)
+			annots.Add(lblResp.err)
+			continue
+		}
+
+		values = append(values, lblResp.values...)
+	}
+
+	var err error = nil
+	if len(errs) > 0 {
+		err = errs[0]
+	}
+	return dedupe(values), *annots, err
+}
+
+func dedupe(values []string) []string {
+	set := make(map[string]struct{}, len(values))
+	for _, val := range values {
+		set[val] = struct{}{}
+	}
+
+	deduped := make([]string, 0, len(set))
+	for val := range set {
+		deduped = append(deduped, val)
+	}
+	return deduped
 }

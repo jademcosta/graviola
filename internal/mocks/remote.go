@@ -87,8 +87,8 @@ func (mock *RemoteStorageMock) LabelNames(ctx context.Context, matchers ...*labe
 	lblNames := make([]string, 0)
 	if mock.SeriesSet != nil {
 		for _, serie := range mock.SeriesSet.Series {
-			for _, val := range serie.Lbs.Map() {
-				lblNames = append(lblNames, val)
+			for name := range serie.Lbs.Map() {
+				lblNames = append(lblNames, name)
 			}
 		}
 	}
