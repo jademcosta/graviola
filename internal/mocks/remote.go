@@ -16,7 +16,11 @@ type RemoteStorageMock struct {
 	CalledWithSortSeries []bool
 	CalledWithHints      []*storage.SelectHints
 	CalledWithMatchers   [][]*labels.Matcher
+	CalledWithNames      []string
+	CalledWithContexts   []context.Context
 	CloseCalled          int
+	Error                error
+	Annots               annotations.Annotations
 	Mu                   sync.Mutex
 }
 
@@ -24,6 +28,7 @@ func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hint
 	mock.Mu.Lock()
 	defer mock.Mu.Unlock()
 
+	mock.CalledWithContexts = append(mock.CalledWithContexts, ctx)
 	mock.CalledWithSortSeries = append(mock.CalledWithSortSeries, sortSeries)
 	mock.CalledWithHints = append(mock.CalledWithHints, hints)
 	mock.CalledWithMatchers = append(mock.CalledWithMatchers, matchers)
@@ -37,28 +42,66 @@ func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hint
 
 func (mock *RemoteStorageMock) Close() error {
 	mock.CloseCalled++
+	if mock.Error != nil {
+		return mock.Error
+	}
 	return nil
 }
 
 func (mock *RemoteStorageMock) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+	mock.Mu.Lock()
+	defer mock.Mu.Unlock()
+
+	annots := annotations.New()
+	annots.Merge(mock.Annots)
+
+	mock.CalledWithContexts = append(mock.CalledWithContexts, ctx)
+	mock.CalledWithNames = append(mock.CalledWithNames, name)
+	mock.CalledWithMatchers = append(mock.CalledWithMatchers, matchers)
 
 	lblVals := make([]string, 0)
-	for _, serie := range mock.SeriesSet.Series {
-		for _, val := range serie.Lbs.Map() {
-			lblVals = append(lblVals, val)
+
+	if mock.SeriesSet != nil {
+		for _, serie := range mock.SeriesSet.Series {
+			for lblName, val := range serie.Lbs.Map() {
+				if lblName == name {
+					lblVals = append(lblVals, val)
+				}
+			}
 		}
 	}
 
-	return lblVals, map[string]error{}, nil
+	var err error
+	if mock.Error != nil {
+		err = mock.Error
+	}
+
+	return lblVals, *annots, err
 }
 
 func (mock *RemoteStorageMock) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+	mock.Mu.Lock()
+	defer mock.Mu.Unlock()
+
+	annots := annotations.New()
+	annots.Merge(mock.Annots)
+
+	mock.CalledWithContexts = append(mock.CalledWithContexts, ctx)
+	mock.CalledWithMatchers = append(mock.CalledWithMatchers, matchers)
+
 	lblNames := make([]string, 0)
-	for _, serie := range mock.SeriesSet.Series {
-		for _, val := range serie.Lbs.Map() {
-			lblNames = append(lblNames, val)
+	if mock.SeriesSet != nil {
+		for _, serie := range mock.SeriesSet.Series {
+			for name := range serie.Lbs.Map() {
+				lblNames = append(lblNames, name)
+			}
 		}
 	}
 
-	return lblNames, map[string]error{}, nil
+	var err error
+	if mock.Error != nil {
+		err = mock.Error
+	}
+
+	return lblNames, *annots, err
 }
