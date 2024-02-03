@@ -49,6 +49,9 @@ func (mock *RemoteStorageMock) Close() error {
 }
 
 func (mock *RemoteStorageMock) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+	mock.Mu.Lock()
+	defer mock.Mu.Unlock()
+
 	annots := annotations.New()
 	annots.Merge(mock.Annots)
 
@@ -77,6 +80,8 @@ func (mock *RemoteStorageMock) LabelValues(ctx context.Context, name string, mat
 }
 
 func (mock *RemoteStorageMock) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+	mock.Mu.Lock()
+	defer mock.Mu.Unlock()
 
 	annots := annotations.New()
 	annots.Merge(mock.Annots)
