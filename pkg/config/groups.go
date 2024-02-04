@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// TODO append a prefix on these consts
 const StrategyFailAll = "fail_all"
 const StrategyPartialResponse = "partial_response"
 const DefaultOnFailStrategy = StrategyFailAll

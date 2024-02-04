@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup/queryfailurestrategy"
 	"github.com/prometheus/prometheus/storage"
 )
 
@@ -16,8 +17,9 @@ type GraviolaStorage struct {
 
 func NewGraviolaStorage(logger *slog.Logger, groups []storage.Querier) *GraviolaStorage {
 	return &GraviolaStorage{
-		logger:    logger,
-		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups),
+		logger: logger,
+		//TODO: should this be the default? Maybe allow to configure it
+		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups, &queryfailurestrategy.FailAllStrategy{}),
 	}
 }
 

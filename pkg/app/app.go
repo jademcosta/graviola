@@ -163,7 +163,9 @@ func initializeGroups(logger *slog.Logger, metricz *prometheus.Registry, groupsC
 	groups := make([]storage.Querier, 0, len(groupsConf))
 
 	for _, groupConf := range groupsConf {
-		group := remotestoragegroup.NewGroup(logger, groupConf.Name, initializeRemotes(logger, metricz, groupConf.Servers))
+		failureStrategy := remotestoragegroup.QueryFailureStrategyFactory(groupConf.OnQueryFailStrategy)
+		group := remotestoragegroup.NewGroup(
+			logger, groupConf.Name, initializeRemotes(logger, metricz, groupConf.Servers), failureStrategy)
 		groups = append(groups, o11y.NewQuerierO11y(metricz, groupConf.Name, "group", group))
 	}
 

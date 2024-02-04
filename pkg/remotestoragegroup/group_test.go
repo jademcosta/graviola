@@ -14,6 +14,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup/queryfailurestrategy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
@@ -22,11 +23,13 @@ import (
 
 var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 
+var defaultFailStrategy remotestoragegroup.OnQueryFailureStrategy = &queryfailurestrategy.FailAllStrategy{}
+
 func TestCloseIsSentToRemotes(t *testing.T) {
 	mockStorage1 := &mocks.RemoteStorageMock{}
 	mockStorage2 := &mocks.RemoteStorageMock{}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 	sut.Close()
 
 	assert.Equal(t, 1, mockStorage1.CloseCalled, "should have called close on wrapper remotes")
@@ -52,7 +55,7 @@ func TestSelect(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 
 	ctx := context.Background()
 	sorted := true
@@ -112,7 +115,7 @@ func TestConcurrentSelects(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 
 	ctx := context.Background()
 	sorted := true
@@ -231,7 +234,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 
 	ctx := context.Background()
 	sorted := true
@@ -307,14 +310,14 @@ func TestLabelNamesAndValues(t *testing.T) {
 			Value: "somevalforlabel2"},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 
 	values, annots, err := sut.LabelNames(ctx, matchers...)
 	assert.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"label1", "label2", "__name__"}, values, "label names should match")
 
-	sut = remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut = remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 
 	values, annots, err = sut.LabelValues(ctx, "__name__")
 	assert.NoError(t, err, "should return no error")
@@ -353,7 +356,7 @@ func TestConcurrentLabelNames(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 
 	ctx := context.Background()
 	matchers := []*labels.Matcher{
@@ -417,7 +420,7 @@ func TestConcurrentLabelValues(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2})
+	sut := remotestoragegroup.NewGroup(logg, "any name", []storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy)
 
 	ctx := context.Background()
 	matchers := []*labels.Matcher{

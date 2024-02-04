@@ -10,22 +10,30 @@ import (
 	"github.com/prometheus/prometheus/util/annotations"
 )
 
+type OnQueryFailureStrategy interface {
+	ForSeriesSet(storage.SeriesSet) storage.SeriesSet
+	ForLabels([]string, error) ([]string, error)
+}
+
 type Group struct {
 	Name              string
 	remoteStorages    []storage.Querier
 	remoteStoragesLen int
-	// StrategyOnQueryFailure string //TODO: implement me
-	logg            *slog.Logger
-	seriesSetMerger MergeStrategy
+	onQueryFailure    OnQueryFailureStrategy
+	logg              *slog.Logger
+	seriesSetMerger   MergeStrategy
 }
 
-func NewGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier) *Group {
+func NewGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier,
+	onQueryFailure OnQueryFailureStrategy) *Group {
+
 	return &Group{
 		Name:              name,
 		remoteStorages:    remoteStorages,
 		remoteStoragesLen: len(remoteStorages),
 		logg:              logg.With("name", name, "component", "group"),
 		seriesSetMerger:   mergestrategy.NewKeepBiggestMergeStrategy(), //FIXME: create a factory that uses the config
+		onQueryFailure:    onQueryFailure,
 	}
 }
 
@@ -37,7 +45,7 @@ func (grp *Group) Select(ctx context.Context, sortSeries bool, hints *storage.Se
 	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
 
 	response := mergeQuerier.Select(ctx, sortSeries, hints, matchers...)
-	return response
+	return grp.onQueryFailure.ForSeriesSet(response)
 }
 
 // LabelQuerier
@@ -58,6 +66,7 @@ func (grp *Group) LabelValues(ctx context.Context, name string, matchers ...*lab
 	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
 
 	vals, annots, err := mergeQuerier.LabelValues(ctx, name, matchers...)
+	vals, err = grp.onQueryFailure.ForLabels(vals, err)
 	return vals, annots, err
 }
 
@@ -69,5 +78,7 @@ func (grp *Group) LabelNames(ctx context.Context, matchers ...*labels.Matcher) (
 	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
 
 	vals, annots, err := mergeQuerier.LabelNames(ctx, matchers...)
+	vals, err = grp.onQueryFailure.ForLabels(vals, err)
+
 	return vals, annots, err
 }
