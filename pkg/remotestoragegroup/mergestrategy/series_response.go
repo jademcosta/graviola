@@ -1,6 +1,8 @@
 package mergestrategy
 
 import (
+	"errors"
+
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
@@ -29,4 +31,21 @@ func mergeAnnotations(seriesSets []storage.SeriesSet) *annotations.Annotations {
 	}
 
 	return mergedAnnots
+}
+
+func joinErrors(seriesSets []storage.SeriesSet) error {
+	errs := make([]error, 0)
+
+	for _, sSet := range seriesSets {
+		gravSeriesSet, ok := sSet.(*domain.GraviolaSeriesSet)
+		if ok && gravSeriesSet.Erro != nil {
+			errs = append(errs, gravSeriesSet.Erro)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
 }

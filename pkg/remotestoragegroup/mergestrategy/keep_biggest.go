@@ -61,9 +61,11 @@ func (merger *KeepBiggestMergeStrategy) Merge(seriesSets []storage.SeriesSet) st
 	}
 
 	annots := mergeAnnotations(seriesSets)
+	erro := joinErrors(seriesSets)
 
 	return &domain.GraviolaSeriesSet{
 		Series: mergedSeries,
 		Annots: *annots,
+		Erro:   erro,
 	}
 }

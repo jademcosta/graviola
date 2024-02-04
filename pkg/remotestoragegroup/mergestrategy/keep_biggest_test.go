@@ -40,6 +40,7 @@ func TestTheMergeMethod(t *testing.T) {
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
+		assert.NoError(t, resp.Err(), "should return no error")
 	})
 
 	t.Run("with simple data", func(t *testing.T) {
@@ -83,6 +84,7 @@ func TestTheMergeMethod(t *testing.T) {
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
+		assert.NoError(t, resp.Err(), "should return no error")
 	})
 
 	t.Run("when conflicting data has the same size, it picks the first one", func(t *testing.T) {
@@ -118,6 +120,7 @@ func TestTheMergeMethod(t *testing.T) {
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
+		assert.NoError(t, resp.Err(), "should return no error")
 	})
 
 	t.Run("it keeps labels with different values as separate values", func(t *testing.T) {
@@ -157,6 +160,7 @@ func TestTheMergeMethod(t *testing.T) {
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
+		assert.NoError(t, resp.Err(), "should return no error")
 	})
 
 	t.Run("multiple conflicts, the biggest keeps being kept", func(t *testing.T) {
@@ -208,6 +212,7 @@ func TestTheMergeMethod(t *testing.T) {
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
+		assert.NoError(t, resp.Err(), "should return no error")
 	})
 
 	t.Run("merges Annotations of all SeriesSets", func(t *testing.T) {
@@ -233,5 +238,38 @@ func TestTheMergeMethod(t *testing.T) {
 		assert.Contains(t, parsedSet.Warnings(), err1.Error(), "should contain the annotation")
 		assert.Contains(t, parsedSet.Warnings(), err2.Error(), "should contain the annotation")
 		assert.Len(t, parsedSet.Series, 0, "should not create any series out of nothing")
+		assert.NoError(t, resp.Err(), "should return no error")
+	})
+
+	t.Run("merges errors of all answers", func(t *testing.T) {
+
+		err1 := errors.New("some random error")
+		err2 := errors.New("expected error")
+
+		seriesSet := []*domain.GraviolaSeriesSet{
+			{Erro: err1},
+			{Erro: err2},
+			{
+				Series: []*domain.GraviolaSeries{
+					{Lbs: labels.FromStrings("x", "value"),
+						Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 16.0}, {Timestamp: 1703379286017, Value: 26.2}}},
+				},
+			},
+		}
+
+		sut := mergestrategy.NewKeepBiggestMergeStrategy()
+
+		resp := sut.Merge(cast(seriesSet))
+		assert.Error(t, resp.Err(), "should return an error")
+
+		parsedSet, ok := resp.(*domain.GraviolaSeriesSet)
+		assert.True(t, ok, "parsing should work")
+
+		assert.Len(t, parsedSet.Annots, 0, "should not be responsible for turning errors into annotations")
+		assert.Len(t, resp.Warnings(), 0, "should not be responsible for turning errors into annotations")
+
+		assert.Len(t, parsedSet.Series, 1, "should keep the returned series")
+		assert.ErrorIs(t, resp.Err(), err1, "should have joined the returned errors")
+		assert.ErrorIs(t, resp.Err(), err2, "should have joined the returned errors")
 	})
 }
