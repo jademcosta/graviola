@@ -241,7 +241,7 @@ func TestTheMergeMethod(t *testing.T) {
 		assert.NoError(t, resp.Err(), "should return no error")
 	})
 
-	t.Run("merges errors of all answers", func(t *testing.T) {
+	t.Run("merges errors of all all SeriesSets", func(t *testing.T) {
 
 		err1 := errors.New("some random error")
 		err2 := errors.New("expected error")

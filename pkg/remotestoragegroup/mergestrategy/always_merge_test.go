@@ -8,10 +8,11 @@ import (
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup/mergestrategy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTheAlwaysMerrgeMergeMethod(t *testing.T) {
+func TestTheAlwaysMergeMergeMethod(t *testing.T) {
 
 	t.Run("with a single set", func(t *testing.T) {
 		series1 := []*domain.GraviolaSeries{
@@ -77,6 +78,7 @@ func TestTheAlwaysMerrgeMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 1.1}, {Timestamp: 1703379256018, Value: 11.0}, {Timestamp: 1703379286017, Value: 1.2}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
@@ -111,6 +113,7 @@ func TestTheAlwaysMerrgeMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 1.1}, {Timestamp: 1703379286017, Value: 1.2}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
@@ -149,6 +152,7 @@ func TestTheAlwaysMerrgeMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 1.1}, {Timestamp: 1703379286017, Value: 1.2}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
@@ -199,13 +203,40 @@ func TestTheAlwaysMerrgeMergeMethod(t *testing.T) {
 				{Lbs: labels.FromStrings("x", "value1"),
 					Datapoints: []model.SamplePair{{Timestamp: 12, Value: 1.1}, {Timestamp: 13, Value: 11.2}, {Timestamp: 15, Value: 1.2}, {Timestamp: 17, Value: 21.2}, {Timestamp: 18, Value: 1.3}, {Timestamp: 21, Value: 31.1}}},
 			},
+			Annots: *annotations.New(),
 		}
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
 	})
 
-	t.Run("merges errors of all answers", func(t *testing.T) {
+	t.Run("merges Annotations of all SeriesSets", func(t *testing.T) {
+
+		err1 := errors.New("some random error")
+		err2 := errors.New("expected error")
+
+		seriesSet := []*domain.GraviolaSeriesSet{
+			{Annots: annotations.New().Add(err1)},
+			{Annots: annotations.New().Add(err2)},
+			{Annots: annotations.New().Add(err2)},
+			{Annots: annotations.New().Add(err2)},
+		}
+
+		sut := mergestrategy.NewAlwaysMergeStrategy()
+
+		resp := sut.Merge(cast(seriesSet))
+
+		parsedSet, ok := resp.(*domain.GraviolaSeriesSet)
+		assert.True(t, ok, "parsing should work")
+
+		assert.Len(t, parsedSet.Annots, 2, "should keep all annotations")
+		assert.Contains(t, parsedSet.Warnings(), err1.Error(), "should contain the annotation")
+		assert.Contains(t, parsedSet.Warnings(), err2.Error(), "should contain the annotation")
+		assert.Len(t, parsedSet.Series, 0, "should not create any series out of nothing")
+		assert.NoError(t, resp.Err(), "should return no error")
+	})
+
+	t.Run("merges errors of all SeriesSets", func(t *testing.T) {
 
 		err1 := errors.New("some random error")
 		err2 := errors.New("expected error")

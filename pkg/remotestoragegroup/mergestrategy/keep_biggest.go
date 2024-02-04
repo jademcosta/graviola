@@ -34,7 +34,6 @@ func (merger *KeepBiggestMergeStrategy) Merge(seriesSets []storage.SeriesSet) st
 			return labels.Compare(a.Labels(), b.Labels())
 		})
 	}
-
 	mergedSeries := make([]*domain.GraviolaSeries, 0, len(graviolaSeries))
 
 	var currentSeries *domain.GraviolaSeries = nil
