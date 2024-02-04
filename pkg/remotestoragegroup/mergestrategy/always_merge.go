@@ -74,8 +74,11 @@ func (merger *AlwaysMergeStrategy) Merge(seriesSets []storage.SeriesSet) storage
 		removeDuplicatedTimestamps(serie)
 	}
 
+	erro := joinErrors(seriesSets)
+
 	return &domain.GraviolaSeriesSet{
 		Series: mergedSeries,
+		Erro:   erro,
 	}
 }
 

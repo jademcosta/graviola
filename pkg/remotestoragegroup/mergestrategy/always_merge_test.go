@@ -1,6 +1,7 @@
 package mergestrategy_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/jademcosta/graviola/pkg/domain"
@@ -202,5 +203,37 @@ func TestTheAlwaysMerrgeMergeMethod(t *testing.T) {
 
 		assert.Equal(t, expected, parsedSet, "should match")
 		equal(t, expected, parsedSet)
+	})
+
+	t.Run("merges errors of all answers", func(t *testing.T) {
+
+		err1 := errors.New("some random error")
+		err2 := errors.New("expected error")
+
+		seriesSet := []*domain.GraviolaSeriesSet{
+			{Erro: err1},
+			{Erro: err2},
+			{
+				Series: []*domain.GraviolaSeries{
+					{Lbs: labels.FromStrings("x", "value"),
+						Datapoints: []model.SamplePair{{Timestamp: 1703379256017, Value: 16.0}, {Timestamp: 1703379286017, Value: 26.2}}},
+				},
+			},
+		}
+
+		sut := mergestrategy.NewAlwaysMergeStrategy()
+
+		resp := sut.Merge(cast(seriesSet))
+		assert.Error(t, resp.Err(), "should return an error")
+
+		parsedSet, ok := resp.(*domain.GraviolaSeriesSet)
+		assert.True(t, ok, "parsing should work")
+
+		assert.Len(t, parsedSet.Annots, 0, "should not be responsible for turning errors into annotations")
+		assert.Len(t, resp.Warnings(), 0, "should not be responsible for turning errors into annotations")
+
+		assert.Len(t, parsedSet.Series, 1, "should keep the returned series")
+		assert.ErrorIs(t, resp.Err(), err1, "should have joined the returned errors")
+		assert.ErrorIs(t, resp.Err(), err2, "should have joined the returned errors")
 	})
 }
