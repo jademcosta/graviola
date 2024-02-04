@@ -40,7 +40,8 @@ storages:
   merge_strategy:
     type: keep_biggest
   # [mandatory] The groups of remote servers. You can define a single group if you want. Groups
-  # are used to share configurations.
+  # are used to share configurations, and all the data inside them will be merged
+  # (the deduplication happens on the level above this one).
   groups:
     # [mandatory] The name of the group. (two different groups cannot have the same name)
     - name: "some group name"

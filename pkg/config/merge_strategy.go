@@ -5,7 +5,11 @@ import (
 	"slices"
 )
 
-const DefaultMergeStrategyType = "keep_biggest"
+const (
+	MergeStrategyAlwaysMerge = "always_merge"
+	MergeStrategyKeepBiggest = "keep_biggest"
+)
+const DefaultMergeStrategyType = MergeStrategyKeepBiggest
 
 type MergeStrategyConfig struct {
 	Strategy string `yaml:"type"`
