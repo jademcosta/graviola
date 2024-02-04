@@ -2,6 +2,7 @@ package remotestoragegroup
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/prometheus/prometheus/model/labels"
@@ -153,7 +154,7 @@ func (mq *mergeQuerier) LabelValues(ctx context.Context, name string, matchers .
 
 	var err error = nil
 	if len(errs) > 0 {
-		err = errs[0]
+		err = errors.Join(errs...)
 	}
 	return dedupe(values), *annots, err
 }
@@ -216,7 +217,7 @@ func (mq *mergeQuerier) LabelNames(ctx context.Context, matchers ...*labels.Matc
 
 	var err error = nil
 	if len(errs) > 0 {
-		err = errs[0]
+		err = errors.Join(errs...)
 	}
 	return dedupe(values), *annots, err
 }

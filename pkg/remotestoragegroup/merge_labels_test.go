@@ -123,8 +123,8 @@ func TestLabelValuesErrorReturn(t *testing.T) {
 
 	assert.ElementsMatch(t, []error{error1, error2}, errorsReturned, "should have added the errors as annotations")
 
-	oneOfTheErrorsReturned := err == error1 || err == error2
-	assert.True(t, oneOfTheErrorsReturned, "should return one of the errors")
+	assert.ErrorIs(t, err, error1, "should have joined the errors")
+	assert.ErrorIs(t, err, error2, "should have joined the errors")
 }
 
 func TestLabelValuesAnnotationsReturn(t *testing.T) {
@@ -246,8 +246,8 @@ func TestLabelNamesErrorReturn(t *testing.T) {
 
 	assert.ElementsMatch(t, []error{error1, error2}, errorsReturned, "should have added the errors as annotations")
 
-	oneOfTheErrorsReturned := err == error1 || err == error2
-	assert.True(t, oneOfTheErrorsReturned, "should return one of the errors")
+	assert.ErrorIs(t, err, error1, "should have joined the errors")
+	assert.ErrorIs(t, err, error2, "should have joined the errors")
 }
 
 func TestLabelNamesAnnotationsReturn(t *testing.T) {
