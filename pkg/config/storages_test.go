@@ -13,7 +13,8 @@ func TestStoragesValidate(t *testing.T) {
 	assert.Error(t, sut.IsValid(), "should error when groups <= 0")
 
 	sut.Groups = make([]config.GroupsConfig, 0)
-	sut.Groups = append(sut.Groups, config.GroupsConfig{Name: "first!!!", OnQueryFailStrategy: "fail_all"})
+	sut.Groups = append(sut.Groups, config.GroupsConfig{Name: "first!!!", OnQueryFailStrategy: "fail_all",
+		Servers: []config.RemoteConfig{{Name: "remote 1", Address: "http://non-existent.something"}}})
 	assert.Error(t, sut.IsValid(), "should error when merge strategy is invalid")
 
 	sut.MergeConf = config.MergeStrategyConfig{}

@@ -32,6 +32,30 @@ func (gc GroupsConfig) IsValid() error {
 	if !slices.Contains(listSupportedFailureStrategies(), strings.ToLower(gc.OnQueryFailStrategy)) {
 		return fmt.Errorf("on_query_fail should be one of %v", listSupportedFailureStrategies())
 	}
+
+	if len(gc.Servers) == 0 {
+		return fmt.Errorf("remotes cannot be empty")
+	}
+
+	for _, remote := range gc.Servers {
+		err := remote.IsValid()
+		if err != nil {
+			return err
+		}
+	}
+
+	return gc.ensureNonDuplicatedRemoteNames()
+}
+
+func (gc GroupsConfig) ensureNonDuplicatedRemoteNames() error {
+	seen := make(map[string]bool)
+	for _, remote := range gc.Servers {
+		if seen[remote.Name] {
+			return fmt.Errorf("remote name %s is duplicated", remote.Name)
+		}
+		seen[remote.Name] = true
+	}
+
 	return nil
 }
 

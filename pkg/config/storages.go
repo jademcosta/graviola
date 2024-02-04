@@ -38,10 +38,10 @@ func (storagesConf StoragesConfig) IsValid() error {
 		}
 	}
 
-	return storagesConf.isNamesDuplicated()
+	return storagesConf.ensureNonDuplicatedGroupNames()
 }
 
-func (storagesConf StoragesConfig) isNamesDuplicated() error {
+func (storagesConf StoragesConfig) ensureNonDuplicatedGroupNames() error {
 	seen := make(map[string]bool)
 	for _, group := range storagesConf.Groups {
 		if seen[group.Name] {
