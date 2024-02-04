@@ -38,5 +38,17 @@ func (storagesConf StoragesConfig) IsValid() error {
 		}
 	}
 
+	return storagesConf.isNamesDuplicated()
+}
+
+func (storagesConf StoragesConfig) isNamesDuplicated() error {
+	seen := make(map[string]bool)
+	for _, group := range storagesConf.Groups {
+		if seen[group.Name] {
+			return fmt.Errorf("group name %s is duplicated", group.Name)
+		}
+		seen[group.Name] = true
+	}
+
 	return nil
 }

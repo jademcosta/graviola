@@ -23,8 +23,14 @@ func TestStoragesValidate(t *testing.T) {
 	assert.NoError(t, sut.IsValid(), "should NOT error when everything is valid")
 
 	sut.Groups = append(sut.Groups, config.GroupsConfig{})
-	assert.Error(t, sut.IsValid(), "should error when merge an underlying group returns a validation error")
+	assert.Error(t, sut.IsValid(), "should error when an underlying group returns a validation error")
 
+	sut.Groups = []config.GroupsConfig{
+		{Name: "first", OnQueryFailStrategy: "fail_all"},
+		{Name: "second", OnQueryFailStrategy: "fail_all"},
+		{Name: "first", OnQueryFailStrategy: "fail_all"},
+	}
+	assert.Error(t, sut.IsValid(), "should error when group names are duplicated")
 }
 
 func TestStoragesFillDefaults(t *testing.T) {
