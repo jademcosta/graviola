@@ -5,6 +5,7 @@ import (
 
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
 	"github.com/stretchr/testify/assert"
@@ -109,8 +110,8 @@ func TestNonSupportedFunctions(t *testing.T) {
 	}
 
 	iter1 := sut.Iterator(nil)
-	assert.Panics(t, func() { iter1.AtFloatHistogram() }, "should panic if try to execute AtFloatHistogram()")
-	assert.Panics(t, func() { iter1.AtHistogram() }, "should panic if try to execute AtHistogram()")
+	assert.Panics(t, func() { iter1.AtFloatHistogram(&histogram.FloatHistogram{}) }, "should panic if try to execute AtFloatHistogram()")
+	assert.Panics(t, func() { iter1.AtHistogram(&histogram.Histogram{}) }, "should panic if try to execute AtHistogram()")
 }
 
 func TestErrIsAlwaysNil(t *testing.T) {
