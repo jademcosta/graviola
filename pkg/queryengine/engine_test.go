@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/prometheus/promql"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var defaultMergeStrategy remotestoragegroup.MergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyType)
@@ -139,7 +140,7 @@ func TestSampleLimit(t *testing.T) {
 		reg := prometheus.NewRegistry()
 
 		conf := config.GraviolaConfig{
-			ApiConf: config.ApiConfig{
+			APIConf: config.APIConfig{
 				Timeout: "3m",
 			},
 			QueryConf: config.QueryConfig{
@@ -157,11 +158,11 @@ func TestSampleLimit(t *testing.T) {
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 
 		result := querier.Exec(ctx)
 		if tc.shouldError {
-			assert.Error(t, result.Err, "query should error when returned series %s", tc.caseName)
+			require.Error(t, result.Err, "query should error when returned series %s", tc.caseName)
 			assert.ErrorIs(t, promql.ErrTooManySamples("query execution"), result.Err, "should be a specific type of error")
 		} else {
 			assert.NoError(t, result.Err, "query should NOT error when returned series %s", tc.caseName)
@@ -176,7 +177,7 @@ func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
 	currentTime := time.Now()
 
 	conf := config.GraviolaConfig{
-		ApiConf: config.ApiConfig{
+		APIConf: config.APIConfig{
 			Timeout: "3m",
 		},
 		QueryConf: config.QueryConfig{
@@ -194,7 +195,7 @@ func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
 	eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 	querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 
 	querier.Exec(ctx)
 
@@ -215,7 +216,7 @@ func TestEngineConcurrentQueriesLimit(t *testing.T) {
 	currentTime := time.Now()
 
 	conf := config.GraviolaConfig{
-		ApiConf: config.ApiConfig{
+		APIConf: config.APIConfig{
 			Timeout: "3m",
 		},
 		QueryConf: config.QueryConfig{
@@ -237,7 +238,7 @@ func TestEngineConcurrentQueriesLimit(t *testing.T) {
 	eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 	querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 
 	start := time.Now()
 

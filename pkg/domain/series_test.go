@@ -41,6 +41,7 @@ func TestIteratorNext(t *testing.T) {
 	assert.Equal(t, chunkenc.ValNone, iter1.Next(), "should have reached the end")
 }
 
+// nolint: testifylint
 func TestIteratorIterating(t *testing.T) {
 	startingLabels := labels.FromStrings("label1", "value1", "label2", "value2")
 	sut := &domain.GraviolaSeries{
@@ -122,7 +123,7 @@ func TestErrIsAlwaysNil(t *testing.T) {
 	}
 
 	iter1 := sut.Iterator(nil)
-	assert.Nil(t, iter1.Err(), "should never return an error")
+	assert.NoError(t, iter1.Err(), "should never return an error")
 }
 
 func TestAtT(t *testing.T) {

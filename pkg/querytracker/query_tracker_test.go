@@ -7,6 +7,7 @@ import (
 
 	"github.com/jademcosta/graviola/pkg/querytracker"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInsertBlocksIfMaxConcurrencyIsReached(t *testing.T) {
@@ -18,9 +19,9 @@ func TestInsertBlocksIfMaxConcurrencyIsReached(t *testing.T) {
 	sut := querytracker.NewGraviolaQueryTracker(2)
 
 	_, err := sut.Insert(ctx, "")
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 	_, err = sut.Insert(ctx, "")
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 
 	go func() {
 		_, err := sut.Insert(ctx, "")
@@ -54,9 +55,9 @@ func TestABlockedInsertIsReleasedIfContextIsDone(t *testing.T) {
 	sut := querytracker.NewGraviolaQueryTracker(2)
 
 	_, err := sut.Insert(ctx, "")
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 	_, err = sut.Insert(ctx, "")
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 
 	go func() {
 		_, err := sut.Insert(ctx, "")
@@ -76,7 +77,7 @@ func TestABlockedInsertIsReleasedIfContextIsDone(t *testing.T) {
 
 	select {
 	case err := <-signalChan:
-		assert.Error(t, err, "the failed insert should return an error")
+		require.Error(t, err, "the failed insert should return an error")
 	default:
 		assert.Fail(t, "the deletion of a query should allow the blocked insert to proceed")
 	}

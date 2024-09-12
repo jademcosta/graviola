@@ -18,17 +18,17 @@ func NewLogger(conf config.LogConfig) *slog.Logger {
 	return slog.New(logHandler)
 }
 
-type graviolaLogger struct {
+type GraviolaLogger struct {
 	logg *slog.Logger
 }
 
-func AdaptToGoKitLogger(logg *slog.Logger) *graviolaLogger {
-	return &graviolaLogger{
+func AdaptToGoKitLogger(logg *slog.Logger) *GraviolaLogger {
+	return &GraviolaLogger{
 		logg: logg,
 	}
 }
 
-func (gravLogger *graviolaLogger) Log(args ...interface{}) error {
+func (gravLogger *GraviolaLogger) Log(args ...interface{}) error {
 	if len(args) == 0 {
 		return nil
 	}

@@ -11,6 +11,7 @@ type GraviolaExemplarQueryable struct {
 }
 
 // ExemplarQueryable
-func (exQuerier *GraviolaExemplarQueryable) ExemplarQuerier(ctx context.Context) (storage.ExemplarQuerier, error) {
+// nolint: nilnil
+func (exQuerier *GraviolaExemplarQueryable) ExemplarQuerier(_ context.Context) (storage.ExemplarQuerier, error) {
 	return nil, nil
 }

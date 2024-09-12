@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var logg = graviolalog.NewLogger(config.LogConfig{Level: "error"})
@@ -45,7 +46,7 @@ func TestSelect(t *testing.T) {
 	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
 	querier, err := sut.Querier(0, 6000)
-	assert.NoError(t, err, "should not return error")
+	require.NoError(t, err, "should not return error")
 
 	ctx := context.Background()
 	sorted := true
@@ -108,7 +109,7 @@ func TestConcurrentSelects(t *testing.T) {
 	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
 	querier, err := sut.Querier(0, 6000)
-	assert.NoError(t, err, "should not return error")
+	require.NoError(t, err, "should not return error")
 
 	ctx := context.Background()
 	sorted := true
@@ -166,7 +167,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	valuesGenerated := make([]float64, 0)
 
 	mockStorage1 := &mocks.RemoteStorageMock{
-		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
+		SelectFn: func(_ context.Context, _ bool, _ *storage.SelectHints, _ ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int() //TODO: extract this logic to a function
 			for {
@@ -197,7 +198,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	}
 
 	mockStorage2 := &mocks.RemoteStorageMock{
-		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
+		SelectFn: func(_ context.Context, _ bool, _ *storage.SelectHints, _ ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int()
 			for {
@@ -230,7 +231,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
 	querier, err := sut.Querier(0, 6000)
-	assert.NoError(t, err, "should not return error")
+	require.NoError(t, err, "should not return error")
 
 	ctx := context.Background()
 	sorted := true

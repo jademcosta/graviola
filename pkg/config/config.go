@@ -7,7 +7,7 @@ import (
 )
 
 type GraviolaConfig struct {
-	ApiConf      ApiConfig      `yaml:"api"`
+	APIConf      APIConfig      `yaml:"api"`
 	LogConf      LogConfig      `yaml:"log"`
 	StoragesConf StoragesConfig `yaml:"storages"`
 	QueryConf    QueryConfig    `yaml:"query"`
@@ -25,7 +25,7 @@ func Parse(data []byte) (GraviolaConfig, error) {
 }
 
 func (gravConf GraviolaConfig) FillDefaults() GraviolaConfig {
-	gravConf.ApiConf = gravConf.ApiConf.FillDefaults()
+	gravConf.APIConf = gravConf.APIConf.FillDefaults()
 	gravConf.LogConf = gravConf.LogConf.FillDefaults()
 	gravConf.StoragesConf = gravConf.StoragesConf.FillDefaults()
 	gravConf.QueryConf = gravConf.QueryConf.FillDefaults()
@@ -34,7 +34,7 @@ func (gravConf GraviolaConfig) FillDefaults() GraviolaConfig {
 }
 
 func (gravConf GraviolaConfig) IsValid() error {
-	err := gravConf.ApiConf.IsValid()
+	err := gravConf.APIConf.IsValid()
 	if err != nil {
 		return err
 	}

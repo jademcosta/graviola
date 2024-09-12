@@ -32,7 +32,7 @@ func (tracker *GraviolaQueryTracker) GetMaxConcurrent() int {
 // Insert inserts query into query tracker. This call must block if maximum number of queries is already running.
 // If Insert doesn't return error then returned integer value should be used in subsequent Delete call.
 // Insert should return error if context is finished before query can proceed, and integer value returned in this case should be ignored by caller.
-func (tracker *GraviolaQueryTracker) Insert(ctx context.Context, query string) (int, error) {
+func (tracker *GraviolaQueryTracker) Insert(ctx context.Context, _ string) (int, error) {
 	select {
 	case tracker.concurrencyLimmiter <- struct{}{}:
 		return rand.Intn(math.MaxInt), nil
@@ -43,6 +43,6 @@ func (tracker *GraviolaQueryTracker) Insert(ctx context.Context, query string) (
 
 // QueryTracker
 // Delete removes query from activity tracker. InsertIndex is value returned by Insert call.
-func (tracker *GraviolaQueryTracker) Delete(insertIndex int) {
+func (tracker *GraviolaQueryTracker) Delete(_ int) {
 	<-tracker.concurrencyLimmiter
 }

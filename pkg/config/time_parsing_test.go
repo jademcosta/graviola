@@ -6,6 +6,7 @@ import (
 
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTimeParsing(t *testing.T) {
@@ -44,7 +45,7 @@ func TestTimeParsing(t *testing.T) {
 		assert.Equal(t, tc.expected, result, "should be equal")
 
 		if tc.shouldError {
-			assert.Errorf(t, err, "input %s should return error", tc.input)
+			require.Errorf(t, err, "input %s should return error", tc.input)
 			continue
 		}
 		assert.NoErrorf(t, err, "input %s should NOT return error", tc.input)
@@ -95,7 +96,7 @@ func TestDateParsing(t *testing.T) {
 		result, err := config.ParseDate(tc.input, now)
 
 		if tc.shouldError {
-			assert.Errorf(t, err, "input %s should return error", tc.input)
+			require.Errorf(t, err, "input %s should return error", tc.input)
 			continue
 		}
 

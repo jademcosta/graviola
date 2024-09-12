@@ -39,7 +39,7 @@ type RemoteStorage struct {
 func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() time.Time) *RemoteStorage {
 	return &RemoteStorage{
 		logg:   logg.With("name", conf.Name, "component", "remote"),
-		URLs:   generateURLs(conf, logg),
+		URLs:   generateURLs(conf),
 		client: &http.Client{}, //TODO: allow to config this
 		now:    now,
 	}
@@ -399,7 +399,7 @@ func (rStorage *RemoteStorage) parseTimeSeriesData(data []byte, sorted bool) *do
 	}
 }
 
-func generateURLs(conf config.RemoteConfig, logg *slog.Logger) map[string]string {
+func generateURLs(conf config.RemoteConfig) map[string]string {
 	result := make(map[string]string)
 
 	base := conf.Address

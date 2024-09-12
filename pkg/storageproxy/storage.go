@@ -26,12 +26,14 @@ func NewGraviolaStorage(logger *slog.Logger, groups []storage.Querier, mergeStra
 }
 
 // Queryable
-func (gravStorage *GraviolaStorage) Querier(mint, maxt int64) (storage.Querier, error) {
+// mint, maxt int64
+func (gravStorage *GraviolaStorage) Querier(_, _ int64) (storage.Querier, error) {
 	return gravStorage.rootGroup, nil
 }
 
 // ChunkQueryable
-func (gravStorage *GraviolaStorage) ChunkQuerier(mint, maxt int64) (storage.ChunkQuerier, error) {
+// mint, maxt int64
+func (gravStorage *GraviolaStorage) ChunkQuerier(_, _ int64) (storage.ChunkQuerier, error) {
 	err := errors.New("should not call ChunkQuerier")
 	gravStorage.logger.Error("ChunkQuerier called on GraviolaStorage")
 	return nil, err

@@ -36,7 +36,7 @@ func (merger *KeepBiggestMergeStrategy) Merge(seriesSets []storage.SeriesSet) st
 	}
 	mergedSeries := make([]*domain.GraviolaSeries, 0, len(graviolaSeries))
 
-	var currentSeries *domain.GraviolaSeries = nil
+	var currentSeries *domain.GraviolaSeries
 	for _, serie := range graviolaSeries {
 		serie := serie
 
