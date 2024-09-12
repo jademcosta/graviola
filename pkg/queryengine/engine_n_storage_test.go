@@ -216,7 +216,7 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 			mockQuerier,
 		}
 
-		gravStorage := storageproxy.NewGraviolaStorage(logger, groups)
+		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		currentTime := time.Now()
@@ -266,7 +266,7 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 			mockQuerier,
 		}
 
-		gravStorage := storageproxy.NewGraviolaStorage(logger, groups)
+		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		currentTime := time.Now()
@@ -403,7 +403,7 @@ func TestIntegrationHandlesCorrectlyTheReturnedSeriesSetOnInstantQuery(t *testin
 			mockQuerier,
 		}
 
-		gravStorage := storageproxy.NewGraviolaStorage(logger, groups)
+		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
