@@ -2,7 +2,6 @@ package storageproxy_test
 
 import (
 	"context"
-	"log/slog"
 	"math/rand"
 	"reflect"
 	"slices"
@@ -13,6 +12,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/jademcosta/graviola/pkg/storageproxy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
@@ -20,7 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
+var logg = graviolalog.NewLogger(config.LogConfig{Level: "error"})
+var defaultMergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyType)
 
 func TestSelect(t *testing.T) {
 
@@ -41,7 +42,7 @@ func TestSelect(t *testing.T) {
 		},
 	}
 
-	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
 	querier, err := sut.Querier(0, 6000)
 	assert.NoError(t, err, "should not return error")
@@ -104,7 +105,7 @@ func TestConcurrentSelects(t *testing.T) {
 		},
 	}
 
-	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
 	querier, err := sut.Querier(0, 6000)
 	assert.NoError(t, err, "should not return error")
@@ -226,7 +227,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 		},
 	}
 
-	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
 	querier, err := sut.Querier(0, 6000)
 	assert.NoError(t, err, "should not return error")

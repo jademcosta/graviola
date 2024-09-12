@@ -15,11 +15,13 @@ type GraviolaStorage struct {
 	rootGroup *remotestoragegroup.Group
 }
 
-func NewGraviolaStorage(logger *slog.Logger, groups []storage.Querier) *GraviolaStorage {
+func NewGraviolaStorage(logger *slog.Logger, groups []storage.Querier, mergeStrategy remotestoragegroup.MergeStrategy) *GraviolaStorage {
 	return &GraviolaStorage{
 		logger: logger,
-		//TODO: should this be the default? Maybe allow to configure it
-		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups, &queryfailurestrategy.FailAllStrategy{}),
+		//TODO: should this fail strategy be the default? Maybe allow to configure it
+		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups,
+			&queryfailurestrategy.FailAllStrategy{},
+			mergeStrategy),
 	}
 }
 

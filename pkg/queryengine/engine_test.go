@@ -10,6 +10,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
 	"github.com/jademcosta/graviola/pkg/queryengine"
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/jademcosta/graviola/pkg/storageproxy"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
@@ -18,6 +19,8 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
 )
+
+var defaultMergeStrategy remotestoragegroup.MergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyType)
 
 func TestSampleLimit(t *testing.T) {
 	logger := graviolalog.NewLogger(conf.LogConf)
@@ -150,7 +153,7 @@ func TestSampleLimit(t *testing.T) {
 			selectReturn: tc.returnSet,
 		}
 
-		gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1})
+		gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1}, defaultMergeStrategy)
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
@@ -187,7 +190,7 @@ func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
 		selectReturn: storage.NoopSeriesSet(),
 	}
 
-	gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1})
+	gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1}, defaultMergeStrategy)
 	eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 	querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
@@ -230,7 +233,7 @@ func TestEngineConcurrentQueriesLimit(t *testing.T) {
 		delay:        200 * time.Millisecond,
 	}
 
-	gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1})
+	gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1}, defaultMergeStrategy)
 	eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 	querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)

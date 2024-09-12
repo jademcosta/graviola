@@ -43,7 +43,7 @@ storages:
   # are used to share configurations, and all the data inside them will be merged
   # (the deduplication happens on the level above this one).
   groups:
-    # [mandatory] The name of the group. (two different groups cannot have the same name)
+    # [mandatory] The name of the group. Two different groups cannot have the same name.
     - name: "some group name"
       # [optional] default: fail_all
       # What will happen if a single server fails to answer the query. A failure means an error.
