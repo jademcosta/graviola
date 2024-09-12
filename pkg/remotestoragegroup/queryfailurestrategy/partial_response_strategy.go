@@ -45,7 +45,7 @@ func (fAllStrategy *PartialResponseStrategy) ForLabels(lbls []string, err error)
 
 func isThereDataInAnySeries(series []*domain.GraviolaSeries) bool {
 	for _, serie := range series {
-		if serie.Datapoints != nil && len(serie.Datapoints) > 0 {
+		if len(serie.Datapoints) > 0 {
 			return true
 		}
 	}
