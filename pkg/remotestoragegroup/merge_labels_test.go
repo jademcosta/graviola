@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLabelValuesSuccessReturn(t *testing.T) {
@@ -42,23 +43,23 @@ func TestLabelValuesSuccessReturn(t *testing.T) {
 	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2}, mergeStrategy)
 
 	vals, _, err := sut.LabelValues(context.Background(), "__name__")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.ElementsMatch(t, []string{"name1", "name2", "name3", "name4", "name5"}, vals,
 		"should return correct label values")
 
 	vals, _, err = sut.LabelValues(context.Background(), "instance")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.ElementsMatch(t, []string{"localhost:9090", "localhost:8080"}, vals,
 		"should return correct label values")
 
 	sut = remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1}, mergeStrategy)
 
 	vals, _, err = sut.LabelValues(context.Background(), "__name__")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.ElementsMatch(t, []string{"name1", "name2", "name3"}, vals, "should return correct label values")
 
 	vals, _, err = sut.LabelValues(context.Background(), "non-existent")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.ElementsMatch(t, []string{}, vals,
 		"should return empty when it does not have the label name equivalent")
 }
@@ -123,7 +124,7 @@ func TestLabelValuesErrorReturn(t *testing.T) {
 
 	assert.ElementsMatch(t, []error{error1, error2}, errorsReturned, "should have added the errors as annotations")
 
-	assert.ErrorIs(t, err, error1, "should have joined the errors")
+	require.ErrorIs(t, err, error1, "should have joined the errors")
 	assert.ErrorIs(t, err, error2, "should have joined the errors")
 }
 
@@ -147,7 +148,7 @@ func TestLabelValuesAnnotationsReturn(t *testing.T) {
 	expectedAnnots.Merge(annots2)
 
 	_, annots, err := sut.LabelValues(context.Background(), "__name__")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 
 	assert.ElementsMatch(t, expectedAnnots.AsStrings("", 0), annots.AsStrings("", 0), "annotations should have been merged")
 }
@@ -177,14 +178,14 @@ func TestLabelNamesSuccessReturn(t *testing.T) {
 	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2}, mergeStrategy)
 
 	vals, _, err := sut.LabelNames(context.Background())
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.ElementsMatch(t, []string{"__name__", "instance", "somename"}, vals,
 		"should return correct label values")
 
 	sut = remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1}, mergeStrategy)
 
 	vals, _, err = sut.LabelNames(context.Background())
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.ElementsMatch(t, []string{"__name__"}, vals, "should return correct label values")
 }
 
@@ -246,7 +247,7 @@ func TestLabelNamesErrorReturn(t *testing.T) {
 
 	assert.ElementsMatch(t, []error{error1, error2}, errorsReturned, "should have added the errors as annotations")
 
-	assert.ErrorIs(t, err, error1, "should have joined the errors")
+	require.ErrorIs(t, err, error1, "should have joined the errors")
 	assert.ErrorIs(t, err, error2, "should have joined the errors")
 }
 
@@ -270,7 +271,7 @@ func TestLabelNamesAnnotationsReturn(t *testing.T) {
 	expectedAnnots.Merge(annots2)
 
 	_, annots, err := sut.LabelNames(context.Background())
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 
 	assert.ElementsMatch(t, expectedAnnots.AsStrings("", 0), annots.AsStrings("", 0), "annotations should have been merged")
 }

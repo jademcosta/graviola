@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/jademcosta/graviola/pkg/remotestoragegroup/mergestrategy"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
@@ -25,14 +24,14 @@ type Group struct {
 }
 
 func NewGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier,
-	onQueryFailure OnQueryFailureStrategy) *Group {
+	onQueryFailure OnQueryFailureStrategy, mergeStrategy MergeStrategy) *Group {
 
 	return &Group{
 		Name:              name,
 		remoteStorages:    remoteStorages,
 		remoteStoragesLen: len(remoteStorages),
 		logg:              logg.With("name", name, "component", "group"),
-		seriesSetMerger:   mergestrategy.NewKeepBiggestMergeStrategy(), //FIXME: create a factory that uses the config
+		seriesSetMerger:   mergeStrategy,
 		onQueryFailure:    onQueryFailure,
 	}
 }

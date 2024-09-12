@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/jademcosta/graviola/pkg/config"
@@ -35,9 +34,9 @@ func TestAcceptSpecificValues(t *testing.T) {
 		err := sut.IsValid()
 
 		if tc.shouldError {
-			assert.Error(t, err, fmt.Sprintf("value %s should result in error when calling Validate", tc.value))
+			assert.Error(t, err, "value %s should result in error when calling Validate", tc.value)
 		} else {
-			assert.NoError(t, err, fmt.Sprintf("value %s should NOT result in error when calling Validate", tc.value))
+			assert.NoError(t, err, "value %s should NOT result in error when calling Validate", tc.value)
 		}
 	}
 }
@@ -47,5 +46,5 @@ func TestLogDefaultValues(t *testing.T) {
 	newSut := sut.FillDefaults()
 
 	assert.Equal(t, config.DefaultLogLevel, newSut.Level,
-		fmt.Sprintf("log level should be set to %s if the provided value is empty", config.DefaultLogLevel))
+		"log level should be set to %s if the provided value is empty", config.DefaultLogLevel)
 }

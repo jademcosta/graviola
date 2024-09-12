@@ -15,21 +15,25 @@ type GraviolaStorage struct {
 	rootGroup *remotestoragegroup.Group
 }
 
-func NewGraviolaStorage(logger *slog.Logger, groups []storage.Querier) *GraviolaStorage {
+func NewGraviolaStorage(logger *slog.Logger, groups []storage.Querier, mergeStrategy remotestoragegroup.MergeStrategy) *GraviolaStorage {
 	return &GraviolaStorage{
 		logger: logger,
-		//TODO: should this be the default? Maybe allow to configure it
-		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups, &queryfailurestrategy.FailAllStrategy{}),
+		//TODO: should this fail strategy be the default? Maybe allow to configure it
+		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups,
+			&queryfailurestrategy.FailAllStrategy{},
+			mergeStrategy),
 	}
 }
 
 // Queryable
-func (gravStorage *GraviolaStorage) Querier(mint, maxt int64) (storage.Querier, error) {
+// mint, maxt int64
+func (gravStorage *GraviolaStorage) Querier(_, _ int64) (storage.Querier, error) {
 	return gravStorage.rootGroup, nil
 }
 
 // ChunkQueryable
-func (gravStorage *GraviolaStorage) ChunkQuerier(mint, maxt int64) (storage.ChunkQuerier, error) {
+// mint, maxt int64
+func (gravStorage *GraviolaStorage) ChunkQuerier(_, _ int64) (storage.ChunkQuerier, error) {
 	err := errors.New("should not call ChunkQuerier")
 	gravStorage.logger.Error("ChunkQuerier called on GraviolaStorage")
 	return nil, err

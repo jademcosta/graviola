@@ -5,10 +5,11 @@ import (
 
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-var testConfig string = `
+var testConfig = `
 api:
   port: 8091
   timeout: 12m
@@ -60,13 +61,13 @@ storages:
 
 func TestParse(t *testing.T) {
 	_, err := config.Parse([]byte("broken yaml"))
-	assert.Error(t, err, "should result in error if config is not valid")
+	require.Error(t, err, "should result in error if config is not valid")
 
 	result, err := config.Parse([]byte(testConfig))
-	assert.NoError(t, err, "should result in NO error if config is valid")
+	require.NoError(t, err, "should result in NO error if config is valid")
 
 	expected := config.GraviolaConfig{
-		ApiConf: config.ApiConfig{
+		APIConf: config.APIConfig{
 			Port:    8091,
 			Timeout: "12m",
 		},
@@ -172,15 +173,15 @@ func TestValidation(t *testing.T) {
 	}
 
 	sut, err := config.Parse(confData)
-	assert.NoError(t, err, "should result in NO error if config is valid")
+	require.NoError(t, err, "should result in NO error if config is valid")
 
 	err = sut.IsValid()
-	assert.Error(t, err, "should ask wrapped children configs if they are valid")
+	require.Error(t, err, "should ask wrapped children configs if they are valid")
 
 	sut = sut.FillDefaults()
 
 	err = sut.IsValid()
-	assert.NoError(t, err, "should be valid")
+	require.NoError(t, err, "should be valid")
 
 	sut.StoragesConf.Groups[0].Name = sut.StoragesConf.Groups[1].Name
 	err = sut.IsValid()
@@ -225,10 +226,10 @@ func TestFillDefaultsCallsItOnChildren(t *testing.T) {
 	}
 
 	sut, err := config.Parse(confData)
-	assert.NoError(t, err, "should result in NO error if config is valid")
+	require.NoError(t, err, "should result in NO error if config is valid")
 
 	sut = sut.FillDefaults()
-	assert.Equal(t, config.DefaultPort, sut.ApiConf.Port, "should have filled API defaults")
+	assert.Equal(t, config.DefaultPort, sut.APIConf.Port, "should have filled API defaults")
 	assert.Equal(t, config.DefaultLogLevel, sut.LogConf.Level, "should have filled Log defaults")
 	assert.Equal(t, config.DefaultMergeStrategyType, sut.StoragesConf.MergeConf.Strategy, "should have filled storage defaults")
 	assert.Equal(t, config.DefaultQueryMaxSamples, sut.QueryConf.MaxSamples, "should have filled querying defaults")

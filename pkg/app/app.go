@@ -50,8 +50,9 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	eng := queryengine.NewGraviolaQueryEngine(logger, metricRegistry, conf)
 
-	graviolaStorage := storageproxy.NewGraviolaStorage(logger,
-		initializeGroups(logger, metricRegistry, conf.StoragesConf.Groups))
+	storageGroups := initializeGroups(logger, metricRegistry, conf.StoragesConf.Groups)
+	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
+	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
 	apiV1 := api_v1.NewAPI(
 		eng,
@@ -114,7 +115,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	apiV1.Register(subRouter)
 	router.Handle("/*", subRouter)
 
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.ApiConf.Port), Handler: router} //TODO: extract and allow config
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.APIConf.Port), Handler: router} //TODO: extract and allow config
 
 	return &App{
 		api:     apiV1,
@@ -141,7 +142,7 @@ func (app *App) Start() {
 }
 
 func (app *App) Stop() {
-	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.ApiConf.TimeoutDuration())
+	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.APIConf.TimeoutDuration())
 	defer cancelFn()
 
 	app.logger.Info("shutting down")
@@ -164,8 +165,12 @@ func initializeGroups(logger *slog.Logger, metricz *prometheus.Registry, groupsC
 
 	for _, groupConf := range groupsConf {
 		failureStrategy := remotestoragegroup.QueryFailureStrategyFactory(groupConf.OnQueryFailStrategy)
+		//TODO: allow to configure this
+		mergeStrategy := remotestoragegroup.MergeStrategyFactory(config.MergeStrategyAlwaysMerge)
+
 		group := remotestoragegroup.NewGroup(
-			logger, groupConf.Name, initializeRemotes(logger, metricz, groupConf.Servers), failureStrategy)
+			logger, groupConf.Name,
+			initializeRemotes(logger, metricz, groupConf.Servers), failureStrategy, mergeStrategy)
 		groups = append(groups, o11y.NewQuerierO11y(metricz, groupConf.Name, "group", group))
 	}
 
@@ -183,6 +188,6 @@ func initializeRemotes(logger *slog.Logger, metricz *prometheus.Registry, remote
 	return remotes
 }
 
-func alwaysSuccessfulHandler(w http.ResponseWriter, r *http.Request) {
+func alwaysSuccessfulHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }

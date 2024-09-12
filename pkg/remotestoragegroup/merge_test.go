@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockMergeStrategy struct {
@@ -38,7 +39,7 @@ func TestCloseIsAlwaysNil(t *testing.T) {
 
 	sut := remotestoragegroup.NewMergeQuerier(nil, &mockMergeStrategy{})
 
-	assert.Nil(t, sut.Close(), "Close() should always return nil")
+	assert.NoError(t, sut.Close(), "Close() should always return nil")
 }
 
 func TestClosePropagatesToQueriers(t *testing.T) {
@@ -48,7 +49,7 @@ func TestClosePropagatesToQueriers(t *testing.T) {
 
 	sut := remotestoragegroup.NewMergeQuerier([]storage.Querier{querier1, querier2}, &mockMergeStrategy{})
 
-	assert.Nil(t, sut.Close(), "Close() should always return nil")
+	require.NoError(t, sut.Close(), "Close() should always return nil")
 
 	assert.Equal(t, 1, querier1.CloseCalled, "should have calledd close on wrapped querier")
 	assert.Equal(t, 1, querier2.CloseCalled, "should have calledd close on wrapped querier")
@@ -147,5 +148,5 @@ func TestWhenOnlyOneQuerierExistDoesNotCallMerge(t *testing.T) {
 
 	sut.Select(context.Background(), true, &storage.SelectHints{})
 
-	assert.Len(t, mergeStrategy.calledWith, 0, "should not call Merge() when only 1 querier exists")
+	assert.Empty(t, mergeStrategy.calledWith, "should not call Merge() when only 1 querier exists")
 }

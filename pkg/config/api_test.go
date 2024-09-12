@@ -1,50 +1,50 @@
 package config_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestApiValidate(t *testing.T) {
-	sut := config.ApiConfig{Port: 0}
+	sut := config.APIConfig{Port: 0}
 	err := sut.IsValid()
-	assert.Error(t, err, "should return error when port is zero")
+	require.Error(t, err, "should return error when port is zero")
 
-	sut = config.ApiConfig{Port: 100}
+	sut = config.APIConfig{Port: 100}
 	err = sut.IsValid()
-	assert.Error(t, err, "should return error when timeout is empty")
+	require.Error(t, err, "should return error when timeout is empty")
 
-	sut = config.ApiConfig{Port: 100, Timeout: "111"}
+	sut = config.APIConfig{Port: 100, Timeout: "111"}
 	err = sut.IsValid()
-	assert.Error(t, err, "should return error when timeout has no unit")
+	require.Error(t, err, "should return error when timeout has no unit")
 
-	sut = config.ApiConfig{Port: 100, Timeout: "111mo"}
+	sut = config.APIConfig{Port: 100, Timeout: "111mo"}
 	err = sut.IsValid()
-	assert.Error(t, err, "should return error when timeout has invalid unit")
+	require.Error(t, err, "should return error when timeout has invalid unit")
 
-	sut = config.ApiConfig{Port: 100, Timeout: "111y"}
+	sut = config.APIConfig{Port: 100, Timeout: "111y"}
 	err = sut.IsValid()
-	assert.Error(t, err, "should return error when timeout has invalid unit")
+	require.Error(t, err, "should return error when timeout has invalid unit")
 
-	sut = config.ApiConfig{Port: 100, Timeout: "-111s"}
+	sut = config.APIConfig{Port: 100, Timeout: "-111s"}
 	err = sut.IsValid()
-	assert.Error(t, err, "should return error when timeout has invalid unit")
+	require.Error(t, err, "should return error when timeout has invalid unit")
 
-	sut = config.ApiConfig{Port: 100, Timeout: "111m"}
+	sut = config.APIConfig{Port: 100, Timeout: "111m"}
 	err = sut.IsValid()
 	assert.NoError(t, err, "should return NO error when every option is correct")
 }
 
 func TestApiDefaultValues(t *testing.T) {
-	sut := config.ApiConfig{}
+	sut := config.APIConfig{}
 	newSut := sut.FillDefaults()
 
-	assert.Equal(t, config.DefaultPort, newSut.Port,
-		fmt.Sprintf("api port should be set to %d if the provided value is empty", config.DefaultPort))
+	assert.Equalf(t, config.DefaultPort, newSut.Port,
+		"api port should be set to %d if the provided value is empty", config.DefaultPort)
 
-	assert.Equal(t, config.DefaultTimeout, newSut.Timeout,
-		fmt.Sprintf("api port should be set to %s if the provided value is empty", config.DefaultTimeout))
+	assert.Equalf(t, config.DefaultTimeout, newSut.Timeout,
+		"api port should be set to %s if the provided value is empty", config.DefaultTimeout)
 }

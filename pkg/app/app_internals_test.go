@@ -7,6 +7,7 @@ import (
 
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,7 +45,7 @@ func TestIntegrationAnswers500OnPanic(t *testing.T) {
 
 	sut := NewApp(conf)
 
-	sut.router.Get("/boom", func(w http.ResponseWriter, r *http.Request) {
+	sut.router.Get("/boom", func(_ http.ResponseWriter, _ *http.Request) {
 		panic("panic!")
 	})
 
@@ -57,6 +58,7 @@ func TestIntegrationAnswers500OnPanic(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	resp, err := http.Get("http://localhost:8091/boom")
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, "HTTP status should be 500")
 }
