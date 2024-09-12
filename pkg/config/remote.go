@@ -27,7 +27,7 @@ func (sc RemoteConfig) IsValid() error {
 
 	rex, _ := regexp.Compile("^https?://.+$")
 
-	if !rex.Match([]byte(sc.Address)) {
+	if !rex.MatchString(sc.Address) {
 		return fmt.Errorf("address should start with http:// or https://")
 	}
 

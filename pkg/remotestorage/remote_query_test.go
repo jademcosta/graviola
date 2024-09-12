@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
@@ -124,7 +125,7 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 		} else {
 			sentPayload, err = url.PathUnescape(bodiesRangeQuery[idx])
 		}
-		assert.NoError(t, err, "should not error here")
+		require.NoError(t, err, "should not error here")
 		assert.Equal(t, tc.expected, sentPayload, "should have sent the correct payload")
 	}
 }
@@ -136,9 +137,8 @@ func TestUsesTheContextParameter(t *testing.T) {
 	defer cancelFn()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, _ *http.Request) {
 
-		// time.Sleep(200 * time.Millisecond)
 		ddl, ok := ctx.Deadline()
 		assert.True(t, ok, "should have a deadline set")
 		assert.Equal(t, deadline, ddl, "should have the same deadline")

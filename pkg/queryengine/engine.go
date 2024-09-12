@@ -21,7 +21,7 @@ type GraviolaQueryEngine struct {
 
 func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Registry, conf config.GraviolaConfig) *GraviolaQueryEngine {
 	wrapped := promql.NewEngine(promql.EngineOpts{
-		Timeout:              conf.ApiConf.TimeoutDuration(),
+		Timeout:              conf.APIConf.TimeoutDuration(),
 		MaxSamples:           conf.QueryConf.MaxSamples,
 		LookbackDelta:        conf.QueryConf.LookbackDeltaDuration(),
 		EnableAtModifier:     true,
@@ -38,7 +38,7 @@ func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Regi
 }
 
 // QueryEngine
-func (gravEng *GraviolaQueryEngine) SetQueryLogger(l promql.QueryLogger) {
+func (gravEng *GraviolaQueryEngine) SetQueryLogger(_ promql.QueryLogger) {
 	panic("should not be called")
 }
 

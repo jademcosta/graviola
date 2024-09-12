@@ -115,7 +115,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	apiV1.Register(subRouter)
 	router.Handle("/*", subRouter)
 
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.ApiConf.Port), Handler: router} //TODO: extract and allow config
+	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.APIConf.Port), Handler: router} //TODO: extract and allow config
 
 	return &App{
 		api:     apiV1,
@@ -142,7 +142,7 @@ func (app *App) Start() {
 }
 
 func (app *App) Stop() {
-	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.ApiConf.TimeoutDuration())
+	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.APIConf.TimeoutDuration())
 	defer cancelFn()
 
 	app.logger.Info("shutting down")
@@ -188,6 +188,6 @@ func initializeRemotes(logger *slog.Logger, metricz *prometheus.Registry, remote
 	return remotes
 }
 
-func alwaysSuccessfulHandler(w http.ResponseWriter, r *http.Request) {
+func alwaysSuccessfulHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }

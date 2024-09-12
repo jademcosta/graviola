@@ -18,10 +18,11 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var conf config.GraviolaConfig = config.GraviolaConfig{
-	ApiConf: config.ApiConfig{
+	APIConf: config.APIConfig{
 		Timeout: "3m",
 	},
 	QueryConf: config.QueryConfig{
@@ -175,7 +176,7 @@ type MockQuerier struct {
 	selectReturn     storage.SeriesSet
 }
 
-func (mock *MockQuerier) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
+func (mock *MockQuerier) Select(_ context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
 	mock.selectCalledWith = append(mock.selectCalledWith, selectCalled{
 		sortSeries: sortSeries,
 		hints:      hints,
@@ -192,11 +193,11 @@ func (mock *MockQuerier) Close() error {
 	return nil
 }
 
-func (mock *MockQuerier) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mock *MockQuerier) LabelValues(_ context.Context, _ string, _ ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	return nil, nil, nil
 }
 
-func (mock *MockQuerier) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mock *MockQuerier) LabelNames(_ context.Context, _ ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	return nil, nil, nil
 }
 
@@ -222,14 +223,14 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		currentTime := time.Now()
 
 		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 
 		querier.Exec(ctx)
 
 		queriesMatchersReceived := make([][]labels.Matcher, 0)
 
 		for _, selectEntry := range mockQuerier.selectCalledWith {
-			assert.Equal(t, false, selectEntry.sortSeries, "should be equal")
+			assert.False(t, selectEntry.sortSeries, "should be equal")
 
 			if tc.hintsFunc != nil {
 				localHints := tc.hintsFunc()
@@ -272,7 +273,7 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		currentTime := time.Now()
 		startTime := currentTime.Add(-2 * time.Hour)
 		endTime := currentTime
-		step := time.Duration(time.Minute)
+		step := time.Minute
 		if tc.hintsFunc != nil {
 			step = time.Duration(tc.hintsFunc().Step)
 		}
@@ -282,7 +283,6 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 			startTime, endTime, step,
 		)
 		if err != nil {
-			fmt.Println("On query: " + tc.query)
 			panic(err)
 		}
 
@@ -291,7 +291,7 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		queriesMatchersReceived := make([][]labels.Matcher, 0)
 
 		for _, selectEntry := range mockQuerier.selectCalledWith {
-			assert.Equal(t, false, selectEntry.sortSeries, "should be equal")
+			assert.False(t, selectEntry.sortSeries, "should be equal")
 
 			if tc.hintsFunc != nil {
 				localHints := tc.hintsFunc()
@@ -407,7 +407,7 @@ func TestIntegrationHandlesCorrectlyTheReturnedSeriesSetOnInstantQuery(t *testin
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 
 		result := querier.Exec(ctx)
 

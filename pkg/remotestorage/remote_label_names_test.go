@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const labelNamesResponse = `{"status":"success","data":[{{LABELS}}]}`
@@ -34,7 +35,7 @@ func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			var content string
 			if len(tc.labels) > 0 {
@@ -53,8 +54,8 @@ func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
 		result, annotations, err := sut.LabelNames(context.Background())
-		assert.NoError(t, err, "should have returned no error")
-		assert.Len(t, annotations.AsErrors(), 0, "should have no annotations")
+		require.NoError(t, err, "should have returned no error")
+		assert.Empty(t, annotations.AsErrors(), "should have no annotations")
 
 		assert.Len(t, result, len(tc.labels), "should have returned all the label names")
 		assert.ElementsMatch(t, tc.labels, result, "elements should match")
@@ -81,7 +82,7 @@ func TestKnowsHowToDealWithLabelNamesRemoteErrors(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(tc.responseStatus)
 			_, err := w.Write([]byte(tc.response))
 			panicOnError(err)
@@ -91,7 +92,7 @@ func TestKnowsHowToDealWithLabelNamesRemoteErrors(t *testing.T) {
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
 		_, _, err := sut.LabelNames(context.Background())
-		assert.Errorf(t, err, "should have returned no error when status is %d and response %s",
+		require.Errorf(t, err, "should have returned no error when status is %d and response %s",
 			tc.responseStatus, tc.response)
 
 		remoteSrv.Close()
@@ -125,10 +126,10 @@ func TestLabelNamesParametersAreSentToRemote(t *testing.T) {
 
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
 	_, _, err := sut.LabelNames(context.Background(), matchers...)
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 
 	result, err := url.QueryUnescape(calledWith)
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.Equal(t, generateQueryParams(matchers), result, "query params should match")
 }
 
@@ -159,7 +160,7 @@ func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc(remotestorage.DefaultLabelNamesPath, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(tc.response))
 			panicOnError(err)
@@ -169,7 +170,7 @@ func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
 		_, annots, err := sut.LabelNames(context.Background())
-		assert.NoError(t, err, "should have returned NO error")
+		require.NoError(t, err, "should have returned NO error")
 		assert.Equal(
 			t,
 			tc.expected,
@@ -191,11 +192,11 @@ func generateQueryParams(matchers []*labels.Matcher) string {
 	builder := strings.Builder{}
 
 	for _, matcher := range matchers {
-		_, err := builder.Write([]byte("match[]="))
+		_, err := builder.WriteString("match[]=")
 		panicOnError(err)
-		_, err = builder.Write([]byte(matcher.String()))
+		_, err = builder.WriteString(matcher.String())
 		panicOnError(err)
-		_, err = builder.Write([]byte("&"))
+		_, err = builder.WriteString("&")
 		panicOnError(err)
 	}
 

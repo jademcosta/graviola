@@ -33,7 +33,7 @@ func (fAllStrategy *PartialResponseStrategy) ForSeriesSet(sSets storage.SeriesSe
 // OnQueryFailureStrategy
 func (fAllStrategy *PartialResponseStrategy) ForLabels(lbls []string, err error) ([]string, error) {
 	if err == nil { //No error, keep everything
-		return lbls, err
+		return lbls, nil
 	}
 
 	if len(lbls) == 0 { //This error needs to be reported in case it exists

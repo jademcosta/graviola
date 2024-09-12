@@ -8,12 +8,12 @@ import (
 const DefaultPort = 9197
 const DefaultTimeout = "1m"
 
-type ApiConfig struct {
+type APIConfig struct {
 	Port    int    `yaml:"port"`
 	Timeout string `yaml:"timeout"`
 }
 
-func (apiConf ApiConfig) FillDefaults() ApiConfig {
+func (apiConf APIConfig) FillDefaults() APIConfig {
 	if apiConf.Port == 0 {
 		apiConf.Port = DefaultPort
 	}
@@ -25,7 +25,7 @@ func (apiConf ApiConfig) FillDefaults() ApiConfig {
 	return apiConf
 }
 
-func (apiConf ApiConfig) IsValid() error {
+func (apiConf APIConfig) IsValid() error {
 	if apiConf.Port == 0 {
 		return fmt.Errorf("port cannot be zero")
 	}
@@ -38,7 +38,7 @@ func (apiConf ApiConfig) IsValid() error {
 	return nil
 }
 
-func (apiConf ApiConfig) TimeoutDuration() time.Duration {
+func (apiConf APIConfig) TimeoutDuration() time.Duration {
 	parsed, err := ParseDuration(apiConf.Timeout)
 	if err != nil {
 		panic(err)

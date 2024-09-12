@@ -19,6 +19,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
@@ -177,7 +178,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	valuesGenerated := make([]float64, 0)
 
 	mockStorage1 := &mocks.RemoteStorageMock{
-		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
+		SelectFn: func(_ context.Context, _ bool, _ *storage.SelectHints, _ ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int() //TODO: extract this logic to a function
 			for {
@@ -208,7 +209,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	}
 
 	mockStorage2 := &mocks.RemoteStorageMock{
-		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
+		SelectFn: func(_ context.Context, _ bool, _ *storage.SelectHints, _ ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int()
 			for {
@@ -319,7 +320,7 @@ func TestLabelNamesAndValues(t *testing.T) {
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	values, annots, err := sut.LabelNames(ctx, matchers...)
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"label1", "label2", "__name__"}, values, "label names should match")
 
@@ -327,17 +328,17 @@ func TestLabelNamesAndValues(t *testing.T) {
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	values, annots, err = sut.LabelValues(ctx, "__name__")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"name1", "name2"}, values, "label values should match")
 
 	values, annots, err = sut.LabelValues(ctx, "label1")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"val1"}, values, "label values should match")
 
 	values, annots, err = sut.LabelValues(ctx, "label2")
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"val2"}, values, "label values should match")
 }

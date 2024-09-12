@@ -94,7 +94,7 @@ func (mockRR *mockRemoteRoute) metricsAsJSONString() string {
 		lblsJSON, err := serie.Lbs.MarshalJSON()
 		panicOnError(err)
 
-		_, err = builder.WriteString(string(lblsJSON))
+		_, err = builder.Write(lblsJSON)
 		panicOnError(err)
 
 		_, err = builder.WriteString(`,"values":[`)

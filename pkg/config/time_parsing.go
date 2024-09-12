@@ -36,7 +36,7 @@ func ParseDuration(durationToParse string) (time.Duration, error) {
 
 	durationToParse = strings.Trim(durationToParse, " ")
 
-	if !durationRex.Match([]byte(durationToParse)) {
+	if !durationRex.MatchString(durationToParse) {
 		return 0, fmt.Errorf("value %s is not a duration", durationToParse)
 	}
 
@@ -72,25 +72,28 @@ func ParseDate(dateToParse string, now time.Time) (time.Time, error) {
 	dateToParse = strings.Trim(dateToParse, " ")
 
 	dt, err := time.Parse(time.RFC3339, dateToParse)
-	if err == nil {
-		return dt, err
+	success := err == nil
+	if success {
+		return dt, nil
 	}
 
 	dt, err = tryParseRelativeTimestamp(dateToParse, now)
-	if err == nil {
-		return dt, err
+	success = err == nil
+	if success {
+		return dt, nil
 	}
 
 	dt, err = tryParseUnixTimestamp(dateToParse, now)
-	if err == nil {
-		return dt, err
+	success = err == nil
+	if success {
+		return dt, nil
 	}
 
 	return now, fmt.Errorf("unable to parse time: %w", err)
 }
 
 func tryParseUnixTimestamp(dateToParse string, now time.Time) (time.Time, error) {
-	if !unixTimestampRex.Match([]byte(dateToParse)) {
+	if !unixTimestampRex.MatchString(dateToParse) {
 		return now, fmt.Errorf("value %s is not a unix timestamp", dateToParse)
 	}
 
@@ -104,7 +107,7 @@ func tryParseUnixTimestamp(dateToParse string, now time.Time) (time.Time, error)
 }
 
 func tryParseRelativeTimestamp(dateToParse string, now time.Time) (time.Time, error) {
-	if !relativeTimestampRex.Match([]byte(dateToParse)) {
+	if !relativeTimestampRex.MatchString(dateToParse) {
 		return now, fmt.Errorf("value %s is not a relative date", dateToParse)
 	}
 
