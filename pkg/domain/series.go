@@ -103,7 +103,7 @@ func (gravIter *GraviolaIterator) At() (int64, float64) {
 // AtHistogram returns the current timestamp/value pair if the value is
 // a histogram with integer counts. Before the iterator has advanced,
 // the behaviour is unspecified.
-func (gravIter *GraviolaIterator) AtHistogram() (int64, *histogram.Histogram) {
+func (gravIter *GraviolaIterator) AtHistogram(_ *histogram.Histogram) (int64, *histogram.Histogram) {
 	panic("native histograms is not supported yet") //TODO: add support
 }
 
@@ -112,8 +112,8 @@ func (gravIter *GraviolaIterator) AtHistogram() (int64, *histogram.Histogram) {
 // value is a histogram with integer counts, in which case a
 // FloatHistogram copy of the histogram is returned. Before the iterator
 // has advanced, the behaviour is unspecified.
-func (gravIter *GraviolaIterator) AtFloatHistogram() (int64, *histogram.FloatHistogram) {
-	panic("implement-me")
+func (gravIter *GraviolaIterator) AtFloatHistogram(_ *histogram.FloatHistogram) (int64, *histogram.FloatHistogram) {
+	panic("implement-me") //FIXME: implement this
 }
 
 // AtT returns the current timestamp.
