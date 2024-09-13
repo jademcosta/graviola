@@ -53,7 +53,7 @@ func TestCorrectlyParsesLabelNamesSuccessfulResponse(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		result, annotations, err := sut.LabelNames(context.Background())
+		result, annotations, err := sut.LabelNames(context.Background(), nil)
 		require.NoError(t, err, "should have returned no error")
 		assert.Empty(t, annotations.AsErrors(), "should have no annotations")
 
@@ -91,7 +91,7 @@ func TestKnowsHowToDealWithLabelNamesRemoteErrors(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		_, _, err := sut.LabelNames(context.Background())
+		_, _, err := sut.LabelNames(context.Background(), nil)
 		require.Errorf(t, err, "should have returned no error when status is %d and response %s",
 			tc.responseStatus, tc.response)
 
@@ -125,7 +125,7 @@ func TestLabelNamesParametersAreSentToRemote(t *testing.T) {
 	}
 
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-	_, _, err := sut.LabelNames(context.Background(), matchers...)
+	_, _, err := sut.LabelNames(context.Background(), nil, matchers...)
 	require.NoError(t, err, "should return no error")
 
 	result, err := url.QueryUnescape(calledWith)
@@ -169,7 +169,7 @@ func TestLabelNamesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		_, annots, err := sut.LabelNames(context.Background())
+		_, annots, err := sut.LabelNames(context.Background(), nil)
 		require.NoError(t, err, "should have returned NO error")
 		assert.Equal(
 			t,

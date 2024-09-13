@@ -119,8 +119,8 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 	}
 
 	responseTSData := rStorage.parseTimeSeriesData(reencodedData, sortSeries)
-	if err != nil {
-		e := fmt.Errorf("unable to parse time-series data: %w", err)
+	if responseTSData.Erro != nil {
+		e := fmt.Errorf("unable to parse time-series data: %w", responseTSData.Erro)
 		rStorage.logg.Error("parsing time-series data", "error", e)
 		return &domain.GraviolaSeriesSet{
 			Erro:   e,
@@ -153,6 +153,7 @@ func (rStorage *RemoteStorage) Close() error {
 func (rStorage *RemoteStorage) LabelValues(
 	ctx context.Context,
 	name string,
+	_ *storage.LabelHints, //TODO: use hints
 	matchers ...*labels.Matcher,
 ) ([]string, annotations.Annotations, error) {
 
@@ -205,6 +206,7 @@ func (rStorage *RemoteStorage) LabelValues(
 //	// to label names of metrics matching the matchers.
 func (rStorage *RemoteStorage) LabelNames(
 	ctx context.Context,
+	_ *storage.LabelHints, //TODO: use hints
 	matchers ...*labels.Matcher,
 ) ([]string, annotations.Annotations, error) {
 

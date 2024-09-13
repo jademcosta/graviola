@@ -98,14 +98,16 @@ func (mq *MergeQuerier) Close() error {
 // It is not safe to use the strings beyond the lifetime of the querier.
 // If matchers are specified the returned result set is reduced
 // to label values of metrics matching the matchers.
-func (mq *MergeQuerier) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mq *MergeQuerier) LabelValues(
+	ctx context.Context, name string, hints *storage.LabelHints, matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
 
 	if len(mq.queriers) == 0 {
 		return []string{}, map[string]error{}, nil
 	}
 
 	if len(mq.queriers) == 1 {
-		values, annots, err := mq.queriers[0].LabelValues(ctx, name, matchers...)
+		values, annots, err := mq.queriers[0].LabelValues(ctx, name, hints, matchers...)
 		if err != nil {
 			return values, annots, err
 		}
@@ -123,7 +125,7 @@ func (mq *MergeQuerier) LabelValues(ctx context.Context, name string, matchers .
 		go func(qr storage.Querier) {
 
 			defer wg.Done()
-			values, annotationsResponse, err := qr.LabelValues(ctx, name, matchers...)
+			values, annotationsResponse, err := qr.LabelValues(ctx, name, hints, matchers...)
 
 			valuesChan <- &labelResponse{
 				values: values,
@@ -161,13 +163,15 @@ func (mq *MergeQuerier) LabelValues(ctx context.Context, name string, matchers .
 // LabelNames returns all the unique label names present in the block in sorted order.
 // If matchers are specified the returned result set is reduced
 // to label names of metrics matching the matchers.
-func (mq *MergeQuerier) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mq *MergeQuerier) LabelNames(
+	ctx context.Context, hints *storage.LabelHints, matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
 	if len(mq.queriers) == 0 {
 		return []string{}, map[string]error{}, nil
 	}
 
 	if len(mq.queriers) == 1 {
-		vals, annots, err := mq.queriers[0].LabelNames(ctx, matchers...)
+		vals, annots, err := mq.queriers[0].LabelNames(ctx, hints, matchers...)
 		if err != nil {
 			return vals, annots, err
 		}
@@ -185,7 +189,7 @@ func (mq *MergeQuerier) LabelNames(ctx context.Context, matchers ...*labels.Matc
 		go func(qr storage.Querier) {
 
 			defer wg.Done()
-			values, annotationsResponse, err := qr.LabelNames(ctx, matchers...)
+			values, annotationsResponse, err := qr.LabelNames(ctx, hints, matchers...)
 
 			valuesChan <- &labelResponse{
 				values: values,
