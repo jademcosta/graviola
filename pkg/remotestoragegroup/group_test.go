@@ -319,7 +319,7 @@ func TestLabelNamesAndValues(t *testing.T) {
 	sut := remotestoragegroup.NewGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
-	values, annots, err := sut.LabelNames(ctx, matchers...)
+	values, annots, err := sut.LabelNames(ctx, nil, matchers...)
 	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"label1", "label2", "__name__"}, values, "label names should match")
@@ -327,17 +327,17 @@ func TestLabelNamesAndValues(t *testing.T) {
 	sut = remotestoragegroup.NewGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
-	values, annots, err = sut.LabelValues(ctx, "__name__")
+	values, annots, err = sut.LabelValues(ctx, "__name__", nil)
 	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"name1", "name2"}, values, "label values should match")
 
-	values, annots, err = sut.LabelValues(ctx, "label1")
+	values, annots, err = sut.LabelValues(ctx, "label1", nil)
 	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"val1"}, values, "label values should match")
 
-	values, annots, err = sut.LabelValues(ctx, "label2")
+	values, annots, err = sut.LabelValues(ctx, "label2", nil)
 	require.NoError(t, err, "should return no error")
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"val2"}, values, "label values should match")
@@ -388,7 +388,7 @@ func TestConcurrentLabelNames(t *testing.T) {
 
 	for i := 0; i < goroutinesTotal; i++ {
 		go func() {
-			result, _, err := sut.LabelNames(ctx, matchers...)
+			result, _, err := sut.LabelNames(ctx, nil, matchers...)
 			assert.NoError(t, err, "should not error")
 			results <- result
 			wg.Done()
@@ -453,7 +453,7 @@ func TestConcurrentLabelValues(t *testing.T) {
 
 	for i := 0; i < goroutinesTotal; i++ {
 		go func() {
-			result, _, err := sut.LabelValues(ctx, "__name__", matchers...)
+			result, _, err := sut.LabelValues(ctx, "__name__", nil, matchers...)
 			assert.NoError(t, err, "should not error")
 			results <- result
 			wg.Done()

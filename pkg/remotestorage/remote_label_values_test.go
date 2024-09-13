@@ -56,7 +56,7 @@ func TestCorrectlyParsesLabelValuesSuccessResponse(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		result, annotations, err := sut.LabelValues(context.Background(), "any-name")
+		result, annotations, err := sut.LabelValues(context.Background(), "any-name", nil)
 		require.NoError(t, err, "should have returned no error")
 		assert.Empty(t, annotations.AsErrors(), "should have no annotations")
 
@@ -94,7 +94,7 @@ func TestLabelValuesKnowsHowToDealWithRemoteErrors(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		_, _, err := sut.LabelNames(context.Background())
+		_, _, err := sut.LabelNames(context.Background(), nil)
 		require.Errorf(t, err, "should have returned no error when status is %d and response %s",
 			tc.responseStatus, tc.response)
 
@@ -128,7 +128,7 @@ func TestLabelValuesParametersAreSentToRemote(t *testing.T) {
 	}
 
 	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-	_, _, err := sut.LabelValues(context.Background(), "some-random-name", matchers...)
+	_, _, err := sut.LabelValues(context.Background(), "some-random-name", nil, matchers...)
 	require.NoError(t, err, "should return no error")
 
 	paramsResult, err := url.QueryUnescape(calledWithParams)
@@ -173,7 +173,7 @@ func TestLabelValuesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
 		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		_, annots, err := sut.LabelValues(context.Background(), "any-name")
+		_, annots, err := sut.LabelValues(context.Background(), "any-name", nil)
 		require.NoError(t, err, "should have returned NO error")
 		assert.Equal(
 			t,

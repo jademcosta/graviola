@@ -24,7 +24,9 @@ type RemoteStorageMock struct {
 	Mu                   sync.Mutex
 }
 
-func (mock *RemoteStorageMock) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
+func (mock *RemoteStorageMock) Select(
+	ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher,
+) storage.SeriesSet {
 	mock.Mu.Lock()
 	defer mock.Mu.Unlock()
 
@@ -48,7 +50,9 @@ func (mock *RemoteStorageMock) Close() error {
 	return nil
 }
 
-func (mock *RemoteStorageMock) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mock *RemoteStorageMock) LabelValues(
+	ctx context.Context, name string, _ *storage.LabelHints, matchers ...*labels.Matcher, //TODO: test hints
+) ([]string, annotations.Annotations, error) {
 	mock.Mu.Lock()
 	defer mock.Mu.Unlock()
 
@@ -79,7 +83,9 @@ func (mock *RemoteStorageMock) LabelValues(ctx context.Context, name string, mat
 	return lblVals, *annots, err
 }
 
-func (mock *RemoteStorageMock) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mock *RemoteStorageMock) LabelNames(
+	ctx context.Context, _ *storage.LabelHints, matchers ...*labels.Matcher, //TODO: test hints
+) ([]string, annotations.Annotations, error) {
 	mock.Mu.Lock()
 	defer mock.Mu.Unlock()
 

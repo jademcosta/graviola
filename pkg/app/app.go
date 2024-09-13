@@ -89,6 +89,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 		metricRegistry, // registerer prometheus.Registerer
 		nil,            // statsRenderer StatsRenderer
 		remoteWriteEnabled,
+		nil, // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
 		otlpEnabled,
 	)
 
