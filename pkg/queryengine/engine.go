@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/jademcosta/graviola/pkg/config"
-	"github.com/jademcosta/graviola/pkg/graviolalog"
 	"github.com/jademcosta/graviola/pkg/querytracker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/promql"
@@ -28,7 +27,7 @@ func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Regi
 		EnableNegativeOffset: true,
 		ActiveQueryTracker:   querytracker.NewGraviolaQueryTracker(conf.QueryConf.ConcurrentQueries),
 		Reg:                  metricRegistry,
-		Logger:               graviolalog.AdaptToGoKitLogger(logger),
+		Logger:               logger,
 	})
 
 	return &GraviolaQueryEngine{
