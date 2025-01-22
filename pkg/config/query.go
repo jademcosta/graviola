@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const DefaultQueryMaxSamples = 10000
+const DefaultQueryMaxSamples = 100000
 const DefaultQueryLookbackDelta = "5m"
 const DefaultQueryConcurrentQueries = 20
 
