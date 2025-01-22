@@ -14,7 +14,7 @@ type GraviolaQueryTracker struct {
 
 func NewGraviolaQueryTracker(maxConcurrentQueries int) *GraviolaQueryTracker {
 	if maxConcurrentQueries < 1 {
-		panic("maxConcurrentQueries < 1")
+		panic("maxConcurrentQueries < 1 is not allowed")
 	}
 
 	return &GraviolaQueryTracker{
@@ -37,7 +37,7 @@ func (tracker *GraviolaQueryTracker) Insert(ctx context.Context, _ string) (int,
 	case tracker.concurrencyLimmiter <- struct{}{}:
 		return rand.Intn(math.MaxInt), nil
 	case <-ctx.Done():
-		return 0, fmt.Errorf("when waiting for query concurrency slot: %w", context.DeadlineExceeded)
+		return 0, fmt.Errorf("when waiting for query concurrency slot: %w", ctx.Err())
 	}
 }
 
@@ -45,4 +45,9 @@ func (tracker *GraviolaQueryTracker) Insert(ctx context.Context, _ string) (int,
 // Delete removes query from activity tracker. InsertIndex is value returned by Insert call.
 func (tracker *GraviolaQueryTracker) Delete(_ int) {
 	<-tracker.concurrencyLimmiter
+}
+
+// QueryTracker
+func (tracker *GraviolaQueryTracker) Close() error {
+	return nil
 }

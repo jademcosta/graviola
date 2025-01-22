@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/util/notifications"
 	"github.com/prometheus/prometheus/web"
 	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
@@ -69,7 +70,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 		nil,                        // TSDBAdminStats
 		"",                         // dbDir string
 		false,                      // enableAdmin bool
-		graviolalog.AdaptToGoKitLogger(logger),
+		logger,
 		nil,                             // func(context.Context) RulesRetriever
 		100,                             //TODO: allow config (remoteReadSampleLimit)
 		10,                              //TODO: allow config (remoteReadConcurrencyLimit)
@@ -85,6 +86,15 @@ func NewApp(conf config.GraviolaConfig) *App {
 			BuildDate: version.BuildDate,
 			GoVersion: version.GoVersion,
 		}, // buildInfo *PrometheusVersion
+
+		func() []notifications.Notification {
+			return nil
+		}, //notificationsGetter, to get notifications to show on the UI
+		func() (<-chan notifications.Notification, func(), bool) {
+			noNotificationStreamAnswer := false
+			return nil, func() {}, noNotificationStreamAnswer
+		}, // notificationsSub, to get SSE notifications, live
+
 		metricRegistry, // gatherer prometheus.Gatherer
 		metricRegistry, // registerer prometheus.Registerer
 		nil,            // statsRenderer StatsRenderer
