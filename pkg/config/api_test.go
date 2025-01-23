@@ -15,27 +15,11 @@ func TestApiValidate(t *testing.T) {
 
 	sut = config.APIConfig{Port: 100}
 	err = sut.IsValid()
-	require.Error(t, err, "should return error when timeout is empty")
+	require.NoError(t, err, "should return NO error when every option is correct")
 
-	sut = config.APIConfig{Port: 100, Timeout: "111"}
+	sut = config.APIConfig{}.FillDefaults()
 	err = sut.IsValid()
-	require.Error(t, err, "should return error when timeout has no unit")
-
-	sut = config.APIConfig{Port: 100, Timeout: "111mo"}
-	err = sut.IsValid()
-	require.Error(t, err, "should return error when timeout has invalid unit")
-
-	sut = config.APIConfig{Port: 100, Timeout: "111y"}
-	err = sut.IsValid()
-	require.Error(t, err, "should return error when timeout has invalid unit")
-
-	sut = config.APIConfig{Port: 100, Timeout: "-111s"}
-	err = sut.IsValid()
-	require.Error(t, err, "should return error when timeout has invalid unit")
-
-	sut = config.APIConfig{Port: 100, Timeout: "111m"}
-	err = sut.IsValid()
-	assert.NoError(t, err, "should return NO error when every option is correct")
+	require.NoError(t, err, "filled with defaults should be valid")
 }
 
 func TestApiDefaultValues(t *testing.T) {
@@ -44,7 +28,4 @@ func TestApiDefaultValues(t *testing.T) {
 
 	assert.Equalf(t, config.DefaultPort, newSut.Port,
 		"api port should be set to %d if the provided value is empty", config.DefaultPort)
-
-	assert.Equalf(t, config.DefaultTimeout, newSut.Timeout,
-		"api port should be set to %s if the provided value is empty", config.DefaultTimeout)
 }

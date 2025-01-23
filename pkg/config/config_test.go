@@ -12,10 +12,10 @@ import (
 var testConfig = `
 api:
   port: 8091
-  timeout: 12m
 
 query:
   max_samples: 12345
+  timeout: 12m
 
 log:
   level: "error"
@@ -68,11 +68,11 @@ func TestParse(t *testing.T) {
 
 	expected := config.GraviolaConfig{
 		APIConf: config.APIConfig{
-			Port:    8091,
-			Timeout: "12m",
+			Port: 8091,
 		},
 		QueryConf: config.QueryConfig{
 			MaxSamples: 12345,
+			Timeout:    "12m",
 		},
 		LogConf: config.LogConfig{
 			Level: "error",

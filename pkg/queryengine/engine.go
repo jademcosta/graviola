@@ -12,15 +12,18 @@ import (
 	"github.com/prometheus/prometheus/storage"
 )
 
-// This is a thin wrapper, used to make it easier to debug
+// This is a thin wrapper of Prometheus query engine, used to make it easier to debug and add
+// telemetry
 type GraviolaQueryEngine struct {
-	logger  *slog.Logger
-	wrapped *promql.Engine
+	logger             *slog.Logger
+	wrappedQueryEngine *promql.Engine
 }
 
-func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Registry, conf config.GraviolaConfig) *GraviolaQueryEngine {
-	wrapped := promql.NewEngine(promql.EngineOpts{
-		Timeout:              conf.APIConf.TimeoutDuration(),
+func NewGraviolaQueryEngine(
+	logger *slog.Logger, metricRegistry *prometheus.Registry, conf config.GraviolaConfig,
+) *GraviolaQueryEngine {
+	wrappedPromQLEngine := promql.NewEngine(promql.EngineOpts{
+		Timeout:              conf.QueryConf.TimeoutDuration(),
 		MaxSamples:           conf.QueryConf.MaxSamples,
 		LookbackDelta:        conf.QueryConf.LookbackDeltaDuration(),
 		EnableAtModifier:     true,
@@ -31,26 +34,27 @@ func NewGraviolaQueryEngine(logger *slog.Logger, metricRegistry *prometheus.Regi
 	})
 
 	return &GraviolaQueryEngine{
-		logger:  logger,
-		wrapped: wrapped,
+		logger:             logger,
+		wrappedQueryEngine: wrappedPromQLEngine,
 	}
 }
 
 // QueryEngine
-func (gravEng *GraviolaQueryEngine) SetQueryLogger(_ promql.QueryLogger) {
+func (gravQueryEng *GraviolaQueryEngine) SetQueryLogger(_ promql.QueryLogger) {
 	panic("should not be called")
 }
 
 // QueryEngine
-func (gravEng *GraviolaQueryEngine) NewInstantQuery(
+func (gravQueryEng *GraviolaQueryEngine) NewInstantQuery(
 	ctx context.Context, q storage.Queryable, opts promql.QueryOpts, qs string, ts time.Time,
 ) (promql.Query, error) {
-	return gravEng.wrapped.NewInstantQuery(ctx, q, opts, qs, ts)
+	return gravQueryEng.wrappedQueryEngine.NewInstantQuery(ctx, q, opts, qs, ts)
 }
 
 // QueryEngine
-func (gravEng *GraviolaQueryEngine) NewRangeQuery(
-	ctx context.Context, q storage.Queryable, opts promql.QueryOpts, qs string, start, end time.Time, interval time.Duration,
+func (gravQueryEng *GraviolaQueryEngine) NewRangeQuery(
+	ctx context.Context, q storage.Queryable, opts promql.QueryOpts, qs string, start, end time.Time,
+	interval time.Duration,
 ) (promql.Query, error) {
-	return gravEng.wrapped.NewRangeQuery(ctx, q, opts, qs, start, end, interval)
+	return gravQueryEng.wrappedQueryEngine.NewRangeQuery(ctx, q, opts, qs, start, end, interval)
 }

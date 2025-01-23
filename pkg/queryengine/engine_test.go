@@ -140,13 +140,11 @@ func TestSampleLimit(t *testing.T) {
 		reg := prometheus.NewRegistry()
 
 		conf := config.GraviolaConfig{
-			APIConf: config.APIConfig{
-				Timeout: "3m",
-			},
 			QueryConf: config.QueryConfig{
 				MaxSamples:        tc.maxSamples,
 				LookbackDelta:     config.DefaultQueryLookbackDelta,
 				ConcurrentQueries: 2,
+				Timeout:           "3m",
 			},
 		}
 
@@ -177,13 +175,11 @@ func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
 	currentTime := time.Now()
 
 	conf := config.GraviolaConfig{
-		APIConf: config.APIConfig{
-			Timeout: "3m",
-		},
 		QueryConf: config.QueryConfig{
 			MaxSamples:        10,
 			LookbackDelta:     "17s",
 			ConcurrentQueries: 2,
+			Timeout:           "3m",
 		},
 	}
 
@@ -216,13 +212,11 @@ func TestEngineConcurrentQueriesLimit(t *testing.T) {
 	currentTime := time.Now()
 
 	conf := config.GraviolaConfig{
-		APIConf: config.APIConfig{
-			Timeout: "3m",
-		},
 		QueryConf: config.QueryConfig{
 			MaxSamples:        10,
 			LookbackDelta:     "17s",
 			ConcurrentQueries: 1,
+			Timeout:           "3m",
 		},
 	}
 

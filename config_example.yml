@@ -1,8 +1,5 @@
 api:
   port: 8091
-  # [optional] Defines after how much time the query is aborted and an error is returned.
-  # default is 1 minute (1m).
-  timeout: 1m
 
 # Configs about queries
 querying:
@@ -24,6 +21,9 @@ querying:
   # query arrives (21th query )it will be denied. So, size the machine running Graviola to be able to
   # handle the load from the value set here. Default is 20.
   max_concurrent_queries: 30
+  # [optional] Defines after how much time the query is aborted and an error is returned.
+  # default is 1 minute (1m).
+  timeout: 1m
 
 # [optional] Controls the log level. Allowed values: debug, info, warn, error. Default value is "info"
 log:

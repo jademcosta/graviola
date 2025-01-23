@@ -14,12 +14,12 @@ import (
 const configOneGroupWithOneRemote = `
 api:
   port: 8091
-  timeout: 3m
 
 query:
   max_samples: 1000
   lookback_delta: 5m
   max_concurrent_queries: 30
+  timeout: 3m
 
 log:
   level: error

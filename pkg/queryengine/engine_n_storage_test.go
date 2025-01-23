@@ -22,13 +22,11 @@ import (
 )
 
 var conf config.GraviolaConfig = config.GraviolaConfig{
-	APIConf: config.APIConfig{
-		Timeout: "3m",
-	},
 	QueryConf: config.QueryConfig{
 		MaxSamples:        1000,
 		LookbackDelta:     config.DefaultQueryLookbackDelta,
 		ConcurrentQueries: 1,
+		Timeout:           "3m",
 	},
 }
 

@@ -153,7 +153,8 @@ func (app *App) Start() {
 }
 
 func (app *App) Stop() {
-	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.APIConf.TimeoutDuration())
+	//TODO: should this timeout be a config on its own?
+	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.QueryConf.TimeoutDuration())
 	defer cancelFn()
 
 	app.logger.Info("shutting down")
