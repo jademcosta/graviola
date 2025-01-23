@@ -55,6 +55,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
+	//TODO: avoid all nils in the functions below. This is to avoid `panic`s
 	apiV1 := api_v1.NewAPI(
 		eng,
 		graviolaStorage,

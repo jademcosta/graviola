@@ -9,16 +9,19 @@ import (
 	"github.com/prometheus/prometheus/storage"
 )
 
-// GraviolaStorage is a wrapper around a group of groups
+// GraviolaStorage is a wrapper around a list of groups. It implements the same interface of a
+// Prometheus "Queryable". So, it acts like a "storage" of data
 type GraviolaStorage struct {
 	logger    *slog.Logger
 	rootGroup *remotestoragegroup.Group
 }
 
-func NewGraviolaStorage(logger *slog.Logger, groups []storage.Querier, mergeStrategy remotestoragegroup.MergeStrategy) *GraviolaStorage {
+func NewGraviolaStorage(
+	logger *slog.Logger, groups []storage.Querier, mergeStrategy remotestoragegroup.MergeStrategy,
+) *GraviolaStorage {
 	return &GraviolaStorage{
 		logger: logger,
-		//TODO: should this fail strategy be the default? Maybe allow to configure it
+		//TODO: should this fail strategy be the default? Allow to configure it
 		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups,
 			&queryfailurestrategy.FailAllStrategy{},
 			mergeStrategy),

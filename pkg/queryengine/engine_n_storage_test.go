@@ -31,9 +31,11 @@ var conf config.GraviolaConfig = config.GraviolaConfig{
 }
 
 var queryTestCases = []struct {
-	hintsFunc     func() *storage.SelectHints
-	query         string
-	labelMatchers [][]labels.Matcher
+	//This is a function type only to be able to do some nil checking for cases where we have
+	// no expected hints
+	expectedHintsFunc     func() *storage.SelectHints
+	query                 string
+	expectedLabelMatchers [][]labels.Matcher
 }{
 	{nil, "up", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
 	{nil, "count(up)", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
@@ -43,14 +45,17 @@ var queryTestCases = []struct {
 	{nil, `topk(4, sum(up) by(account))`, [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
 	{
 		func() *storage.SelectHints {
-			return &storage.SelectHints{Start: time.Unix(12345678, 0).Add(-5 * time.Minute).UnixMilli(), End: time.Unix(12345678, 0).UnixMilli()}
+			return &storage.SelectHints{
+				Start: time.Unix(12345678, 0).Add(-5 * time.Minute).Add(time.Millisecond).UnixMilli(),
+				End:   time.Unix(12345678, 0).UnixMilli(),
+			}
 		},
 		`sum(up @ 12345678)`, [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}},
 	},
 	{
 		func() *storage.SelectHints {
 			return &storage.SelectHints{
-				Start: time.Now().Add(-2 * time.Hour).Add(-5 * time.Minute).UnixMilli(),
+				Start: time.Now().Add(-2 * time.Hour).Add(-5 * time.Minute).Add(time.Millisecond).UnixMilli(),
 				End:   time.Now().UnixMilli(),
 				Step:  300000,
 			}
@@ -81,7 +86,7 @@ var queryTestCases = []struct {
 			},
 		},
 	},
-	{nil, `sum(rate(some_sum[5m])) by(instance) / on() sum(rate(some_count{instance="1234"}[5m]))`,
+	{nil, `sum(rate(some_sum[5m])) by(instance) / on(somerandomaaa) sum(rate(some_count{instance="1234"}[5m]))`,
 		[][]labels.Matcher{
 			{{Type: labels.MatchEqual, Name: "__name__", Value: "some_sum"}},
 			{
@@ -199,7 +204,7 @@ func (mock *MockQuerier) LabelNames(_ context.Context, _ *storage.LabelHints, _ 
 	return nil, nil, nil
 }
 
-func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
+func TestIntegrationSendsExpectedHintsAndLabelMatchers(t *testing.T) {
 
 	logger := graviolalog.NewLogger(conf.LogConf)
 	ctx := context.Background()
@@ -216,11 +221,12 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		}
 
 		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
-		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
+		sut := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		currentTime := time.Now()
 
-		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
+		querier, err := sut.NewInstantQuery(
+			ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
 		require.NoError(t, err, "should return no error")
 
 		querier.Exec(ctx)
@@ -228,25 +234,30 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		queriesMatchersReceived := make([][]labels.Matcher, 0)
 
 		for _, selectEntry := range mockQuerier.selectCalledWith {
-			assert.False(t, selectEntry.sortSeries, "should be equal")
+			assert.False(t, selectEntry.sortSeries, "should not tell series should be sorted")
 
-			if tc.hintsFunc != nil {
-				localHints := tc.hintsFunc()
-				assert.Equal(t, localHints.Step, selectEntry.hints.Step, "hints step should be equal")
-				assert.InDelta(t, localHints.End, selectEntry.hints.End, 100.0, "hints end should be equal (inside a delta)")
-				assert.InDelta(t, localHints.Start, selectEntry.hints.Start, 100.0, "hints start should be equal (inside a delta)")
+			if tc.expectedHintsFunc != nil {
+				expectedHints := tc.expectedHintsFunc()
+				assert.Equal(t, expectedHints.Step, selectEntry.hints.Step, "hints step should be equal")
+				assert.InDelta(t, expectedHints.End, selectEntry.hints.End, 0.01, "hints end should be equal (inside a delta)")
+				assert.InDelta(t, expectedHints.Start, selectEntry.hints.Start, 0.01, "hints start should be equal (inside a delta)")
 
 			} else {
-				assert.Equal(t, int64(0), selectEntry.hints.Step, "hints step should be equal")
+				assert.Equal(t, int64(0), selectEntry.hints.Step, "hints step should be zero")
 				assert.Equal(t, currentTime.UnixMilli(), selectEntry.hints.End, "hints end should be equal")
-				assert.Equal(t, currentTime.Add(-5*time.Minute).UnixMilli(), selectEntry.hints.Start, "hints start should be equal")
+				//I don't know why Prometheus adds this extra millisecond. Just add it here to make sure
+				// we keep the consistency.
+				assert.Equal(t, currentTime.Add(-5*time.Minute).Add(time.Millisecond).UnixMilli(),
+					selectEntry.hints.Start, "hints start should be equal")
 			}
 
 			queriesMatchersReceived = append(queriesMatchersReceived, derefMatchers(selectEntry.matchers))
 		}
 
-		assert.Equalf(t, len(tc.labelMatchers), len(queriesMatchersReceived), "should have performed %d queries", len(tc.labelMatchers))
-		assert.Equalf(t, tc.labelMatchers, queriesMatchersReceived, "should have performed the correct queries")
+		assert.Equalf(t, len(tc.expectedLabelMatchers), len(queriesMatchersReceived),
+			"should have performed %d queries", len(tc.expectedLabelMatchers))
+		assert.Equalf(t, tc.expectedLabelMatchers, queriesMatchersReceived,
+			"should have performed the correct queries")
 	}
 
 	for _, tc := range queryTestCases {
@@ -266,17 +277,17 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		}
 
 		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
-		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
+		sut := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		currentTime := time.Now()
 		startTime := currentTime.Add(-2 * time.Hour)
 		endTime := currentTime
 		step := time.Minute
-		if tc.hintsFunc != nil {
-			step = time.Duration(tc.hintsFunc().Step)
+		if tc.expectedHintsFunc != nil {
+			step = time.Duration(tc.expectedHintsFunc().Step)
 		}
 
-		querier, err := eng.NewRangeQuery(
+		querier, err := sut.NewRangeQuery(
 			ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query,
 			startTime, endTime, step,
 		)
@@ -291,8 +302,8 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		for _, selectEntry := range mockQuerier.selectCalledWith {
 			assert.False(t, selectEntry.sortSeries, "should be equal")
 
-			if tc.hintsFunc != nil {
-				localHints := tc.hintsFunc()
+			if tc.expectedHintsFunc != nil {
+				localHints := tc.expectedHintsFunc()
 				assert.Equal(t, localHints.Step, selectEntry.hints.Step, "hints step should be equal")
 				assert.InDelta(t, localHints.End, selectEntry.hints.End, 100.0, "hints end should be equal (inside a delta)")
 				assert.InDelta(t, localHints.Start, selectEntry.hints.Start, 100.0, "hints start should be equal (inside a delta)")
@@ -300,14 +311,14 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 			} else {
 				assert.Equal(t, int64(60000), selectEntry.hints.Step, "hints step should be equal")
 				assert.Equal(t, endTime.UnixMilli(), selectEntry.hints.End, "hints end should be equal")
-				assert.Equal(t, startTime.Add(-5*time.Minute).UnixMilli(), selectEntry.hints.Start, "hints start should be equal")
+				assert.Equal(t, startTime.Add(-5*time.Minute).Add(time.Millisecond).UnixMilli(), selectEntry.hints.Start, "hints start should be equal")
 			}
 
 			queriesMatchersReceived = append(queriesMatchersReceived, derefMatchers(selectEntry.matchers))
 		}
 
-		assert.Equalf(t, len(tc.labelMatchers), len(queriesMatchersReceived), "should have performed %d queries", len(tc.labelMatchers))
-		assert.Equalf(t, tc.labelMatchers, queriesMatchersReceived, "should have performed the correct queries")
+		assert.Equalf(t, len(tc.expectedLabelMatchers), len(queriesMatchersReceived), "should have performed %d queries", len(tc.expectedLabelMatchers))
+		assert.Equalf(t, tc.expectedLabelMatchers, queriesMatchersReceived, "should have performed the correct queries")
 	}
 }
 

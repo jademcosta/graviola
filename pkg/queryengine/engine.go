@@ -13,7 +13,8 @@ import (
 )
 
 // This is a thin wrapper of Prometheus query engine, used to make it easier to debug and add
-// telemetry
+// telemetry. A query engine breaks the query into smaller pieces and send those pieces to the
+// storage.
 type GraviolaQueryEngine struct {
 	logger             *slog.Logger
 	wrappedQueryEngine *promql.Engine
@@ -46,15 +47,15 @@ func (gravQueryEng *GraviolaQueryEngine) SetQueryLogger(_ promql.QueryLogger) {
 
 // QueryEngine
 func (gravQueryEng *GraviolaQueryEngine) NewInstantQuery(
-	ctx context.Context, q storage.Queryable, opts promql.QueryOpts, qs string, ts time.Time,
+	ctx context.Context, queriable storage.Queryable, opts promql.QueryOpts, qs string, ts time.Time,
 ) (promql.Query, error) {
-	return gravQueryEng.wrappedQueryEngine.NewInstantQuery(ctx, q, opts, qs, ts)
+	return gravQueryEng.wrappedQueryEngine.NewInstantQuery(ctx, queriable, opts, qs, ts)
 }
 
 // QueryEngine
 func (gravQueryEng *GraviolaQueryEngine) NewRangeQuery(
-	ctx context.Context, q storage.Queryable, opts promql.QueryOpts, qs string, start, end time.Time,
+	ctx context.Context, queriable storage.Queryable, opts promql.QueryOpts, qs string, start, end time.Time,
 	interval time.Duration,
 ) (promql.Query, error) {
-	return gravQueryEng.wrappedQueryEngine.NewRangeQuery(ctx, q, opts, qs, start, end, interval)
+	return gravQueryEng.wrappedQueryEngine.NewRangeQuery(ctx, queriable, opts, qs, start, end, interval)
 }

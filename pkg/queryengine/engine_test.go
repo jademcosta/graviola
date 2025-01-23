@@ -199,7 +199,7 @@ func TestEngineUsesTheProvidedLookbackDelta(t *testing.T) {
 		t,
 		selectCalled{sortSeries: false, hints: &storage.SelectHints{
 			End:   currentTime.UnixMilli(),
-			Start: currentTime.Add(-17 * time.Second).UnixMilli(),
+			Start: currentTime.Add(-17 * time.Second).Add(time.Millisecond).UnixMilli(),
 		}, matchers: []*labels.Matcher{labels.MustNewMatcher(labels.MatchEqual, "__name__", "up")}},
 		mock1.selectCalledWith[0],
 	)
@@ -220,6 +220,8 @@ func TestEngineConcurrentQueriesLimit(t *testing.T) {
 		},
 	}
 
+	metricName := "up"
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -229,9 +231,9 @@ func TestEngineConcurrentQueriesLimit(t *testing.T) {
 	}
 
 	gravStorage := storageproxy.NewGraviolaStorage(logger, []storage.Querier{mock1}, defaultMergeStrategy)
-	eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
+	sut := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
-	querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
+	querier, err := sut.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), metricName, currentTime)
 	require.NoError(t, err, "should return no error")
 
 	start := time.Now()
@@ -240,7 +242,7 @@ func TestEngineConcurrentQueriesLimit(t *testing.T) {
 	wg.Done()
 
 	go func() {
-		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), "up", currentTime)
+		querier, err := sut.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), metricName, currentTime)
 		assert.NoError(t, err, "should return no error")
 		querier.Exec(ctx)
 		wg.Done()

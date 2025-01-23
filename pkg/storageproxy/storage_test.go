@@ -21,11 +21,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const anyMinTime = int64(0)
+const anyMaxTime = int64(1)
+
 var logg = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 var defaultMergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyType)
 
 func TestSelect(t *testing.T) {
-
 	mockStorage1 := &mocks.RemoteStorageMock{
 		SeriesSet: &domain.GraviolaSeriesSet{
 			Series: []*domain.GraviolaSeries{
@@ -45,8 +47,8 @@ func TestSelect(t *testing.T) {
 
 	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
-	querier, err := sut.Querier(0, 6000)
-	require.NoError(t, err, "should not return error")
+	querier, err := sut.Querier(anyMinTime, anyMaxTime)
+	require.NoError(t, err, "should return no error")
 
 	ctx := context.Background()
 	sorted := true
@@ -62,7 +64,7 @@ func TestSelect(t *testing.T) {
 
 	mergedSeries := querier.Select(ctx, sorted, hints, matchers...)
 	graviolaSeriesSet, ok := mergedSeries.(*domain.GraviolaSeriesSet)
-	assert.True(t, ok, "should be a GraviolaSeriesSet")
+	require.True(t, ok, "should be a GraviolaSeriesSet")
 
 	assert.Len(t, graviolaSeriesSet.Series, 2, "should have all the remote storage series")
 
@@ -108,8 +110,8 @@ func TestConcurrentSelects(t *testing.T) {
 
 	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
-	querier, err := sut.Querier(0, 6000)
-	require.NoError(t, err, "should not return error")
+	querier, err := sut.Querier(anyMinTime, anyMaxTime)
+	require.NoError(t, err, "should return no error")
 
 	ctx := context.Background()
 	sorted := true
@@ -144,7 +146,7 @@ func TestConcurrentSelects(t *testing.T) {
 		counterOfResults++
 
 		graviolaSeriesSet, ok := res.(*domain.GraviolaSeriesSet)
-		assert.True(t, ok, "should be a GraviolaSeriesSet")
+		require.True(t, ok, "should be a GraviolaSeriesSet")
 		assert.Len(t, graviolaSeriesSet.Series, 2, "should have all the remote storage series")
 
 		for _, serie := range graviolaSeriesSet.Series {
@@ -175,7 +177,6 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 					break
 				}
 				time = rand.Int()
-
 			}
 
 			value := rand.Float64()
