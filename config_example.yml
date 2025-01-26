@@ -83,6 +83,7 @@ storages:
         # this time window)
         start: "now-6h"
         end: "now"
+      # [mandatory] The list of remote storages that belongs to this group
       remotes:
         # [mandatory] the name of this remote. Within a group, 2 different remotes cannot have
         # the same name

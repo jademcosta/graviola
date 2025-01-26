@@ -173,7 +173,9 @@ func alwaysReadyHandler(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func initializeGroups(logger *slog.Logger, metricz *prometheus.Registry, groupsConf []config.GroupsConfig) []storage.Querier {
+func initializeGroups(
+	logger *slog.Logger, metricz *prometheus.Registry, groupsConf []config.GroupsConfig,
+) []storage.Querier {
 	groups := make([]storage.Querier, 0, len(groupsConf))
 
 	for _, groupConf := range groupsConf {
@@ -190,7 +192,9 @@ func initializeGroups(logger *slog.Logger, metricz *prometheus.Registry, groupsC
 	return groups
 }
 
-func initializeRemotes(logger *slog.Logger, metricz *prometheus.Registry, remotesConf []config.RemoteConfig) []storage.Querier {
+func initializeRemotes(
+	logger *slog.Logger, metricz *prometheus.Registry, remotesConf []config.RemoteConfig,
+) []storage.Querier {
 	remotes := make([]storage.Querier, 0, len(remotesConf))
 
 	for _, remoteConf := range remotesConf {

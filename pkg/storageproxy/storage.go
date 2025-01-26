@@ -22,9 +22,11 @@ func NewGraviolaStorage(
 	return &GraviolaStorage{
 		logger: logger,
 		//TODO: should this fail strategy be the default? Allow to configure it
-		rootGroup: remotestoragegroup.NewGroup(logger, "root", groups,
+		rootGroup: remotestoragegroup.NewGroup(
+			logger, "root", groups,
 			&queryfailurestrategy.FailAllStrategy{},
-			mergeStrategy),
+			mergeStrategy,
+		),
 	}
 }
 
