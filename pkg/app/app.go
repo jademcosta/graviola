@@ -51,7 +51,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	eng := queryengine.NewGraviolaQueryEngine(logger, metricRegistry, conf)
 
-	storageGroups := initializeGroups(logger, metricRegistry, conf.StoragesConf.Groups)
+	storageGroups := initializeRemoteGroups(logger, metricRegistry, conf.StoragesConf.Groups)
 	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
@@ -173,8 +173,8 @@ func alwaysReadyHandler(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func initializeGroups(
-	logger *slog.Logger, metricz *prometheus.Registry, groupsConf []config.GroupsConfig,
+func initializeRemoteGroups(
+	logger *slog.Logger, metricz *prometheus.Registry, groupsConf []config.RemoteGroupsConfig,
 ) []storage.Querier {
 	groups := make([]storage.Querier, 0, len(groupsConf))
 
@@ -183,7 +183,7 @@ func initializeGroups(
 		//TODO: allow to configure this
 		mergeStrategy := remotestoragegroup.MergeStrategyFactory(config.MergeStrategyAlwaysMerge)
 
-		group := remotestoragegroup.NewGroup(
+		group := remotestoragegroup.NewRemoteGroup(
 			logger, groupConf.Name,
 			initializeRemotes(logger, metricz, groupConf.Servers), failureStrategy, mergeStrategy)
 		groups = append(groups, o11y.NewQuerierO11y(metricz, groupConf.Name, "group", group))

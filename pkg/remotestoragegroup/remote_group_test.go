@@ -31,7 +31,7 @@ func TestCloseIsSentToRemotes(t *testing.T) {
 	mockStorage1 := &mocks.RemoteStorageMock{}
 	mockStorage2 := &mocks.RemoteStorageMock{}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name",
+	sut := remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 	sut.Close()
 
@@ -58,7 +58,7 @@ func TestSelect(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name",
+	sut := remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	ctx := context.Background()
@@ -119,7 +119,7 @@ func TestConcurrentSelects(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name",
+	sut := remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	ctx := context.Background()
@@ -239,7 +239,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name",
+	sut := remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	ctx := context.Background()
@@ -316,7 +316,7 @@ func TestLabelNamesAndValues(t *testing.T) {
 			Value: "somevalforlabel2"},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name",
+	sut := remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	values, annots, err := sut.LabelNames(ctx, nil, matchers...)
@@ -324,7 +324,7 @@ func TestLabelNamesAndValues(t *testing.T) {
 	assert.Empty(t, annots, "should return no annotation")
 	assert.ElementsMatch(t, []string{"label1", "label2", "__name__"}, values, "label names should match")
 
-	sut = remotestoragegroup.NewGroup(logg, "any name",
+	sut = remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	values, annots, err = sut.LabelValues(ctx, "__name__", nil)
@@ -364,7 +364,7 @@ func TestConcurrentLabelNames(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name",
+	sut := remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	ctx := context.Background()
@@ -429,7 +429,7 @@ func TestConcurrentLabelValues(t *testing.T) {
 		},
 	}
 
-	sut := remotestoragegroup.NewGroup(logg, "any name",
+	sut := remotestoragegroup.NewRemoteGroup(logg, "any name",
 		[]storage.Querier{mockStorage1, mockStorage2}, defaultFailStrategy, defaultMergeStrategy)
 
 	ctx := context.Background()

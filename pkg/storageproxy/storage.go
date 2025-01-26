@@ -13,7 +13,7 @@ import (
 // Prometheus "Queryable". So, it acts like a "storage" of data
 type GraviolaStorage struct {
 	logger    *slog.Logger
-	rootGroup *remotestoragegroup.Group
+	rootGroup *remotestoragegroup.RemoteGroup
 }
 
 func NewGraviolaStorage(
@@ -22,7 +22,7 @@ func NewGraviolaStorage(
 	return &GraviolaStorage{
 		logger: logger,
 		//TODO: should this fail strategy be the default? Allow to configure it
-		rootGroup: remotestoragegroup.NewGroup(
+		rootGroup: remotestoragegroup.NewRemoteGroup(
 			logger, "root", groups,
 			&queryfailurestrategy.FailAllStrategy{},
 			mergeStrategy,

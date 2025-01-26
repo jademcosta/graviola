@@ -81,7 +81,7 @@ func TestParse(t *testing.T) {
 			MergeConf: config.MergeStrategyConfig{
 				Strategy: "type 2",
 			},
-			Groups: []config.GroupsConfig{
+			Groups: []config.RemoteGroupsConfig{
 				{
 					Name:                "group 1 name",
 					OnQueryFailStrategy: "fail_all",
@@ -127,7 +127,7 @@ func TestParse(t *testing.T) {
 func TestValidation(t *testing.T) {
 	inputConf := config.GraviolaConfig{
 		StoragesConf: config.StoragesConfig{
-			Groups: []config.GroupsConfig{
+			Groups: []config.RemoteGroupsConfig{
 				{
 					Name:                "group 1 name",
 					OnQueryFailStrategy: "fail_all",
@@ -191,7 +191,7 @@ func TestValidation(t *testing.T) {
 func TestFillDefaultsCallsItOnChildren(t *testing.T) {
 	inputConf := config.GraviolaConfig{
 		StoragesConf: config.StoragesConfig{
-			Groups: []config.GroupsConfig{
+			Groups: []config.RemoteGroupsConfig{
 				{
 					Name: "group 1 name",
 					Servers: []config.RemoteConfig{

@@ -11,46 +11,46 @@ const StrategyFailAll = "fail_all"
 const StrategyPartialResponse = "partial_response"
 const DefaultOnFailStrategy = StrategyFailAll
 
-type GroupsConfig struct {
+type RemoteGroupsConfig struct {
 	Name                string           `yaml:"name"`
 	Servers             []RemoteConfig   `yaml:"remotes"`
 	TimeWindow          TimeWindowConfig `yaml:"time_window"`
 	OnQueryFailStrategy string           `yaml:"on_query_fail"`
 }
 
-func (gc GroupsConfig) FillDefaults() GroupsConfig {
-	if gc.OnQueryFailStrategy == "" {
-		gc.OnQueryFailStrategy = DefaultOnFailStrategy
+func (rgc RemoteGroupsConfig) FillDefaults() RemoteGroupsConfig {
+	if rgc.OnQueryFailStrategy == "" {
+		rgc.OnQueryFailStrategy = DefaultOnFailStrategy
 	}
-	return gc
+	return rgc
 }
 
-func (gc GroupsConfig) IsValid() error {
-	if gc.Name == "" {
+func (rgc RemoteGroupsConfig) IsValid() error {
+	if rgc.Name == "" {
 		return fmt.Errorf("group name cannot be empty")
 	}
 
-	if !slices.Contains(listSupportedFailureStrategies(), strings.ToLower(gc.OnQueryFailStrategy)) {
+	if !slices.Contains(listSupportedFailureStrategies(), strings.ToLower(rgc.OnQueryFailStrategy)) {
 		return fmt.Errorf("on_query_fail should be one of %v", listSupportedFailureStrategies())
 	}
 
-	if len(gc.Servers) == 0 {
+	if len(rgc.Servers) == 0 {
 		return fmt.Errorf("remotes cannot be empty")
 	}
 
-	for _, remote := range gc.Servers {
+	for _, remote := range rgc.Servers {
 		err := remote.IsValid()
 		if err != nil {
 			return err
 		}
 	}
 
-	return gc.ensureNonDuplicatedRemoteNames()
+	return rgc.ensureNonDuplicatedRemoteNames()
 }
 
-func (gc GroupsConfig) ensureNonDuplicatedRemoteNames() error {
+func (rgc RemoteGroupsConfig) ensureNonDuplicatedRemoteNames() error {
 	seen := make(map[string]bool)
-	for _, remote := range gc.Servers {
+	for _, remote := range rgc.Servers {
 		if seen[remote.Name] {
 			return fmt.Errorf("remote name %s is duplicated", remote.Name)
 		}

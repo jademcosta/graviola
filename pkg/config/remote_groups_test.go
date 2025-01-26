@@ -26,7 +26,7 @@ func TestOnQueryFailAcceptSpecificValues(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		sut := config.GroupsConfig{OnQueryFailStrategy: tc.value, Name: "some name",
+		sut := config.RemoteGroupsConfig{OnQueryFailStrategy: tc.value, Name: "some name",
 			Servers: []config.RemoteConfig{{Name: "some name", Address: "http://non-existent.something"}}}
 		err := sut.IsValid()
 
@@ -39,29 +39,29 @@ func TestOnQueryFailAcceptSpecificValues(t *testing.T) {
 }
 
 func TestGroupsValidate(t *testing.T) {
-	sut := config.GroupsConfig{OnQueryFailStrategy: "fail_all"}
+	sut := config.RemoteGroupsConfig{OnQueryFailStrategy: "fail_all"}
 	require.Error(t, sut.IsValid(), "should error if name is empty")
 
-	sut = config.GroupsConfig{Name: "group 1"}
+	sut = config.RemoteGroupsConfig{Name: "group 1"}
 	require.Error(t, sut.IsValid(), "should error if failure strategy is empty")
 
-	sut = config.GroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all"}
+	sut = config.RemoteGroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all"}
 	require.Error(t, sut.IsValid(), "should error remotes is empty")
 
-	sut = config.GroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
+	sut = config.RemoteGroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
 		Servers: []config.RemoteConfig{
 			{Name: "some name", Address: "http://non-existent.something"},
 			{Name: "some name 2", Address: "http://non-existent.something"},
 		}}
 	require.NoError(t, sut.IsValid(), "should NOT error when everything is correct")
 
-	sut = config.GroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
+	sut = config.RemoteGroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
 		Servers: []config.RemoteConfig{
 			{Name: "some name", Address: "http://non-existent.something"},
 			{Name: "some name2", Address: "non-existent.something"}}}
 	require.Error(t, sut.IsValid(), "should error when underlying remote returns error")
 
-	sut = config.GroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
+	sut = config.RemoteGroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
 		Servers: []config.RemoteConfig{
 			{Name: "some name", Address: "http://non-existent.something"},
 			{Name: "some name", Address: "http://non-existent.something"}}}
@@ -69,11 +69,11 @@ func TestGroupsValidate(t *testing.T) {
 }
 
 func TestOnQueryFailDefaultValues(t *testing.T) {
-	sut := config.GroupsConfig{}
+	sut := config.RemoteGroupsConfig{}
 	newSut := sut.FillDefaults()
 
-	assert.Equalf(t, config.DefaultOnFailStrategy, newSut.OnQueryFailStrategy,
+	assert.Equalf(t, config.StrategyFailAll, newSut.OnQueryFailStrategy,
 		"query failure strategy should be set to %s if the provided value is empty",
-		config.DefaultOnFailStrategy,
+		config.StrategyFailAll,
 	)
 }
