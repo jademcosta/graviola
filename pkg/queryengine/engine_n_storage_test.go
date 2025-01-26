@@ -463,6 +463,3 @@ func derefMatchers(matchers []*labels.Matcher) []labels.Matcher {
 	}
 	return derefed
 }
-
-//TODO:
-// Test @ symbol usage
