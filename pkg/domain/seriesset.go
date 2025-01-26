@@ -5,6 +5,7 @@ import (
 	"github.com/prometheus/prometheus/util/annotations"
 )
 
+// Implements the methods on Prometheus default SeriesSet, so it can be used with the original code
 type GraviolaSeriesSet struct {
 	Series  []*GraviolaSeries
 	current int
