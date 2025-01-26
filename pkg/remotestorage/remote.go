@@ -49,7 +49,8 @@ func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() ti
 //
 // Select returns a set of series that matches the given label matchers.
 // Caller can specify if it requires returned series to be sorted. Prefer not requiring sorting for better performance.
-// It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
+// It allows passing hints that can help in optimising select, but it's up to the (remote)
+// implementation how this is used, if used at all.
 func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
 	promQLQuery, err := ToPromQLQuery(matchers)
 	if err != nil {
