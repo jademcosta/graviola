@@ -1,11 +1,15 @@
-package app
+package api
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/jademcosta/graviola/pkg/config"
+	"github.com/jademcosta/graviola/pkg/graviolalog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/route"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -15,25 +19,13 @@ const configOneGroupWithOneRemote = `
 api:
   port: 8091
 
-query:
-  max_samples: 1000
-  lookback_delta: 5m
-  max_concurrent_queries: 30
-  timeout: 3m
-
 log:
-  level: error
-
-storages:
-  merge_strategy:
-    type: keep_biggest
-  groups:
-    - name: "the solo group"
-      on_query_fail: fail_all
-      remotes:
-        - name: "the server 1"
-          address: "http://localhost:9090"
+  level: debug
 `
+
+type dummyRegisterer struct{}
+
+func (d *dummyRegisterer) Register(_ *route.Router) {}
 
 func TestIntegrationAnswers500OnPanic(t *testing.T) {
 
@@ -43,14 +35,18 @@ func TestIntegrationAnswers500OnPanic(t *testing.T) {
 		panic(err)
 	}
 
-	sut := NewApp(conf)
+	sut := NewGraviolaAPI(
+		conf.APIConf, graviolalog.NewLogger(conf.LogConf), prometheus.NewRegistry(), &dummyRegisterer{})
 
 	sut.router.Get("/boom", func(_ http.ResponseWriter, _ *http.Request) {
-		panic("panic!")
+		panic("panic boooooooommmmm!")
 	})
 
 	go func() {
-		sut.Start()
+		err := sut.Start()
+		if err != nil && err != http.ErrServerClosed {
+			panic(fmt.Sprintf("should not error on api start: %v", err))
+		}
 	}()
 
 	defer sut.Stop()
