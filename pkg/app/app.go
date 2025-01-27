@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,21 +10,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	grafanaregexp "github.com/grafana/regexp"
+	"github.com/jademcosta/graviola/pkg/api"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
-	"github.com/jademcosta/graviola/pkg/http/httpmiddleware"
 	"github.com/jademcosta/graviola/pkg/o11y"
 	"github.com/jademcosta/graviola/pkg/queryengine"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/jademcosta/graviola/pkg/storageproxy"
+	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/notifications"
@@ -37,12 +33,11 @@ const remoteWriteEnabled = false
 const otlpEnabled = false
 
 type App struct {
-	api     *api_v1.API
-	router  *chi.Mux
-	logger  *slog.Logger
-	metricz *prometheus.Registry
-	Srv     *http.Server
-	conf    config.GraviolaConfig // TODO: this is needed due to the api server configs
+	api       *api.GraviolaAPI
+	logger    *slog.Logger
+	metricz   *prometheus.Registry
+	conf      config.GraviolaConfig // TODO: this is needed due to the api server configs
+	cancelCtx context.CancelFunc
 }
 
 func NewApp(conf config.GraviolaConfig) *App {
@@ -55,7 +50,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
-	//TODO: avoid all nils in the functions below. This is to avoid `panic`s
+	//TODO: avoid all nils in the functions below. To avoid `panic`s
 	apiV1 := api_v1.NewAPI(
 		eng,
 		graviolaStorage,
@@ -112,59 +107,57 @@ func NewApp(conf config.GraviolaConfig) *App {
 		),
 	)
 
-	router := chi.NewRouter()
-
-	router.Use(httpmiddleware.NewLoggingMiddleware(logger))
-	router.Use(httpmiddleware.NewMetricsMiddleware(metricRegistry))
-	router.Use(middleware.Recoverer)
-
-	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
-	router.Get("/healthy", alwaysSuccessfulHandler)
-	router.Get("/ready", alwaysSuccessfulHandler)
-
-	subRouter := route.New()
-	subRouter = subRouter.WithPrefix("/api/v1")
-	apiV1.Register(subRouter)
-	router.Handle("/*", subRouter)
-
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.APIConf.Port), Handler: router} //TODO: extract and allow config
+	graviolaAPI := api.NewGraviolaAPI(conf.APIConf, logger, metricRegistry, apiV1)
 
 	return &App{
-		api:     apiV1,
-		router:  router,
+		api:     graviolaAPI,
 		logger:  logger,
 		metricz: metricRegistry,
-		Srv:     srv,
 		conf:    conf,
 	}
 }
 
 func (app *App) Start() {
-	go func() {
+	appCtx, cancelCtx := context.WithCancel(context.Background())
+	app.cancelCtx = cancelCtx
+
+	g := run.Group{}
+
+	g.Add(func() error {
+		return app.api.Start()
+	}, func(_ error) {
+		app.api.Stop()
+		cancelCtx()
+	})
+
+	g.Add(func() error {
 		signalsCh := make(chan os.Signal, 2)
 		signal.Notify(signalsCh, syscall.SIGINT, syscall.SIGTERM)
 
-		s := <-signalsCh
-		app.logger.Info("received signal", "signal", s.String())
-		app.Stop()
-	}()
+		select {
+		case s := <-signalsCh:
+			app.logger.Info("received system signal", "signal", s.String())
+		case <-appCtx.Done():
+		}
+		return nil
+	}, func(_ error) {
+		cancelCtx()
+	})
 
-	app.logger.Info("Starting server...")
-	app.logger.Error("listenandserve exited", "error", fmt.Errorf("on serving HTTP: %w", app.Srv.ListenAndServe()))
+	app.logger.Info("starting Graviola")
+	err := g.Run()
+	if err != nil {
+		app.logger.Error("error after start", "error", err)
+	}
 }
 
 func (app *App) Stop() {
-	//TODO: should this timeout be a config on its own?
-	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.QueryConf.TimeoutDuration())
-	defer cancelFn()
-
-	app.logger.Info("shutting down")
-
-	err := app.Srv.Shutdown(ctx)
-	if err != nil {
-		app.logger.Error("error when sutting down", "error", err)
+	if app.cancelCtx != nil {
+		app.logger.Info("stopping Graviola")
+		app.cancelCtx()
+	} else {
+		app.logger.Error("no context cancel function registered")
 	}
-	app.logger.Info("shutdown finished")
 }
 
 func alwaysReadyHandler(f http.HandlerFunc) http.HandlerFunc {
@@ -203,8 +196,4 @@ func initializeRemotes(
 	}
 
 	return remotes
-}
-
-func alwaysSuccessfulHandler(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }
