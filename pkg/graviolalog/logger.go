@@ -17,6 +17,10 @@ func NewLogger(conf config.LogConfig) *slog.Logger {
 	return slog.New(logHandler)
 }
 
+func NewNoopLogger() *slog.Logger {
+	return slog.New(&noopHandler{})
+}
+
 func parseLevel(lvl string) slog.Level {
 
 	switch strings.ToUpper(lvl) {
