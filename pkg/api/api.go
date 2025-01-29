@@ -77,6 +77,7 @@ func (api *GraviolaAPI) createRoutes() {
 	router.Get("/metrics", promhttp.HandlerFor(api.metricRegistry, promhttp.HandlerOpts{Registry: api.metricRegistry}).ServeHTTP)
 	router.Get("/healthy", alwaysSuccessfulHandler)
 	router.Get("/ready", alwaysSuccessfulHandler)
+	router.Mount("/debug", middleware.Profiler())
 
 	subRouter := route.New()
 	subRouter = subRouter.WithPrefix("/api/v1")
