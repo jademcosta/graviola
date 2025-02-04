@@ -33,3 +33,24 @@ jobs:
         cache: true
     - name: Lint
       run: make lint
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    services:
+      prometheus_1:
+        image: prom/prometheus:latest
+        volumes:
+          - test/e2e/prom1/conf:/etc/prometheus
+      prometheus_2:
+        image: prom/prometheus:latest
+        volumes:
+          - test/e2e/prom2/conf:/etc/prometheus
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.23.1"
+        cache: true
+    - name: Lint
+      run: make acceptance-tests
