@@ -39,10 +39,16 @@ jobs:
     services:
       prometheus_1:
         image: prom/prometheus:latest
+        # Map port 9091 on the Docker host to port 9090 on the Prometheus container
+        ports:
+          - 9091:9090
         volumes:
           - test/e2e/prom1/conf:/etc/prometheus
       prometheus_2:
         image: prom/prometheus:latest
+        # Map port 9092 on the Docker host to port 9090 on the Prometheus container
+        ports:
+          - 9092:9090
         volumes:
           - test/e2e/prom2/conf:/etc/prometheus
     steps:
@@ -52,5 +58,5 @@ jobs:
       with:
         go-version: "1.23.1"
         cache: true
-    - name: Lint
+    - name: e2e_test_1
       run: make test-e2e

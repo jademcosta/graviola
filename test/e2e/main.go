@@ -18,7 +18,7 @@ import (
 )
 
 const apiVersionPath = "/api/v1"
-const prometheus1URLWithPath = "http://localhost:9090" + apiVersionPath
+const prometheus1URLWithPath = "http://prometheus_1:9091" + apiVersionPath
 const graviolaURLWithPath = "http://localhost:9197" + apiVersionPath
 
 var httpCli = &http.Client{

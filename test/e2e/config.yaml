@@ -10,7 +10,7 @@ querying:
 
 # [optional] Controls the log level. Allowed values: debug, info, warn, error. Default value is "info"
 log:
-  level: info
+  level: debug
 
 storages:
   # [optional] default is type 'keep_biggest'. This configures how Graviola will merge the
