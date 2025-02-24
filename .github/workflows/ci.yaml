@@ -43,14 +43,14 @@ jobs:
         ports:
           - 9091:9090
         volumes:
-          - test/e2e/prom1/conf:/etc/prometheus
-      prometheus_2:
-        image: prom/prometheus:latest
-        # Map port 9092 on the Docker host to port 9090 on the Prometheus container
-        ports:
-          - 9092:9090
-        volumes:
-          - test/e2e/prom2/conf:/etc/prometheus
+          - ./test/e2e/prom1/conf:/etc/prometheus
+      # prometheus_2:
+      #   image: prom/prometheus:latest
+      #   # Map port 9092 on the Docker host to port 9090 on the Prometheus container
+      #   ports:
+      #     - 9092:9090
+      #   volumes:
+      #     - test/e2e/prom2/conf:/etc/prometheus
     steps:
     - uses: actions/checkout@v4
     - name: Setup Go
