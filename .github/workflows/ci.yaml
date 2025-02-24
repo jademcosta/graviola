@@ -43,7 +43,7 @@ jobs:
         ports:
           - 9091:9090
         volumes:
-          - ./test/e2e/prom1/conf:/etc/prometheus
+          - ./test/e2e/prom1/conf/conf.yml:/etc/prometheus/prometheus.yml
       # prometheus_2:
       #   image: prom/prometheus:latest
       #   # Map port 9092 on the Docker host to port 9090 on the Prometheus container
