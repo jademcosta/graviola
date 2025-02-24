@@ -24,6 +24,12 @@ test-unit: ## Runs only fast tests
 	$(GOCMD) clean -testcache
 	$(GOTEST) -short -timeout 20s ./...
 
+test-e2e:
+	$(GOCMD) build -o graviola ./cmd/...
+	./graviola --config test/e2e/config.yaml &
+	@sleep 3
+	@$(GOCMD) run ./test/e2e/test_flow/main.go
+
 coverage: ## Run the tests of the project and export the coverage
 	$(GOCMD) clean -testcache
 	$(GOTEST) -timeout 30s -cover -covermode=count -coverprofile=profile.cov ./...

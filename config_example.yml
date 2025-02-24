@@ -57,7 +57,7 @@ storages:
   # means that if 2 remotes have 2 time-series with the same label-set, the time-series will be
   # merged into a single time-series, and all datapoints will be kept.
   # (the deduplication happens on the level above this one).
-  remote_groups:
+  groups:
     # [mandatory] The name of the group. Two different groups cannot have the same name.
     - name: "some group name 1"
       # [optional] default: fail_all

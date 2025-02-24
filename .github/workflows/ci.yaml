@@ -53,4 +53,4 @@ jobs:
         go-version: "1.23.1"
         cache: true
     - name: Lint
-      run: make acceptance-tests
+      run: make test-e2e

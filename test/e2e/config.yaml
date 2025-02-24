@@ -1,0 +1,58 @@
+api:
+  port: 9197
+
+# Configs about queries
+querying:
+  # [optional] Configures how many samples at max can be held in memory on a single query.
+  # A sample is a datapoint from a timeseries
+  # Default value is 100000.
+  max_samples: 100000
+
+# [optional] Controls the log level. Allowed values: debug, info, warn, error. Default value is "info"
+log:
+  level: info
+
+storages:
+  # [optional] default is type 'keep_biggest'. This configures how Graviola will merge the
+  # data from multiple groups.
+  # Possible values are:
+  # * keep_biggest - When 2 time-series from different remotes are excatly the same (but with
+  # different values), the one with the biggest number of datapoints in the response will be
+  # the one kept. If 2 or more time-series have the same count of datapoints, it will pick one at
+  # random.
+  # * always_merge - Will merge all the data into 1 single time-series (for time series that
+  # share the same label set). In case the result has 2 datapoints with the exact same timestamp,
+  # it will pick one at random. This means that if you have 2 time-series with the same label-set,
+  # each one with 20 datapoints, and no datapoint has the same timestamp, they will be merged to
+  # form a single time-series with 40 datapoints.
+  merge_strategy:
+    type: always_merge
+  groups:
+    - name: "my group 1"
+      # [optional] default: fail_all
+      # What will happen if a single server fails to answer the query. A failure means an error.
+      # An empty response is NOT a failure, as no error has happened.
+      # The options are:
+      # * fail_all - fail the whole query on this group
+      # * partial_response - answer the query with the server that returned data, which might
+      # end up being a partial response.
+      on_query_fail: fail_all
+      # [optional] In case you don't want to define a per instance time window, this is where a
+      # time window for all servers in this group is defined. If time_windows are re-defined on
+      # a per server basis, it will override these values from this config.
+      # Graviola will avoid querying it if the query is outide the time window of the group.
+      # If this is not set, graviola will not filter the queries based on the time window
+      time_window:
+        # Accepts 3 formats: relative (now-4d), Unix (1136239445) and
+        # RFC3339 (1996-12-19T16:39:57-08:00) (one more example as this case is difficult:
+        # 1985-04-12T23:20:50.52Z) (but do a favor to yourself and don't use timezones here)
+        # The time defined here will be parsed following the order they were mentioned above:
+        # relative, unix and RFC3339. If you set the value from the example below, you are telling
+        # that this group has only 6 hours of time window (metrics on the remotes are all inside
+        # this time window)
+        start: "now-6h"
+        end: "now"
+      # [mandatory] The list of remote storages that belongs to this group
+      remotes:
+        - name: "prometheus 1"
+          address: "http://localhost:9090"
