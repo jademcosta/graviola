@@ -88,7 +88,7 @@ func checkMetricsExist(timeSeries prompb.TimeSeries, prometheusURL string) error
 	if len(valuesSet) != len(timeSeries.Samples)+1 {
 		return fmt.Errorf(
 			"the count of items in returned response seems to be different than what is required. Expected: %v\n. Response: %v",
-			timeSeries.Samples, responsePrometheus)
+			timeSeries.Samples, string(responsePrometheus))
 	}
 
 	for _, expectedSample := range timeSeries.Samples {

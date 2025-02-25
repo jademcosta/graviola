@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/jademcosta/graviola/test/e2e/fixtures"
@@ -34,4 +35,6 @@ func main() {
 			panic(fmt.Errorf("comparsion error on index %d: %w", idx, err))
 		}
 	}
+
+	os.Exit(0)
 }
