@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"time"
 
+	"github.com/buger/jsonparser"
 	"github.com/jademcosta/graviola/test/e2e/fixtures"
 	"github.com/prometheus/prometheus/prompb"
 )
@@ -45,7 +47,7 @@ func checkMetricsMatch(timeSeries prompb.TimeSeries, graviolaURL string, prometh
 func checkMetricsExist(timeSeries prompb.TimeSeries, prometheusURL string) error {
 	query := labelsToQuery(timeSeries.Labels)
 
-	_, err := execRemoteQuery(
+	responsePrometheus, err := execRemoteQuery(
 		prometheusURL,
 		"/query_range",
 		query,
@@ -54,6 +56,39 @@ func checkMetricsExist(timeSeries prompb.TimeSeries, prometheusURL string) error
 	)
 	if err != nil {
 		return fmt.Errorf("prometheus query failed: %w", err)
+	}
+
+	valuesSet := make(map[float64]struct{})
+
+	_, err = jsonparser.ArrayEach(
+		responsePrometheus,
+		func(value []byte, _ jsonparser.ValueType, _ int, err error) {
+			if err != nil {
+				panic(fmt.Errorf("when iterating on Prometheus response: %w", err))
+			}
+
+			val, _, _, err := jsonparser.Get(value, "[1]")
+			if err != nil {
+				panic(fmt.Errorf("when iterating on Prometheus response, on value extraction: %w", err))
+			}
+
+			floatValue, err := parseToFloat64(val)
+			if err != nil {
+				panic(fmt.Errorf("when iterating on Prometheus response, on value parsing: %w", err))
+			}
+
+			valuesSet[floatValue] = struct{}{}
+		},
+		"data", "result", "values")
+
+	if err != nil {
+		return fmt.Errorf("when iterating on response: %w", err)
+	}
+
+	if len(valuesSet) != len(timeSeries.Samples) {
+		return fmt.Errorf(
+			"the count of items in returned response seems to be different than what is required. Expected: %v\n. Response: %v",
+			timeSeries.Samples, responsePrometheus)
 	}
 
 	// responsePrometheus:
@@ -81,4 +116,13 @@ func checkMetricsExist(timeSeries prompb.TimeSeries, prometheusURL string) error
 	// 	}
 	// }
 	return nil
+}
+
+func parseToFloat64(val []byte) (float64, error) {
+	valAsInt, err := strconv.ParseInt(string(val), 10, 64)
+	if err != nil {
+		return strconv.ParseFloat(string(val), 64)
+	}
+
+	return float64(valAsInt), err
 }
