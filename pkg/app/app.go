@@ -173,7 +173,7 @@ func initializeRemoteGroups(
 
 	for _, groupConf := range groupsConf {
 		failureStrategy := remotestoragegroup.QueryFailureStrategyFactory(groupConf.OnQueryFailStrategy)
-		//TODO: allow to configure this
+		//FIXME: allow to configure this
 		mergeStrategy := remotestoragegroup.MergeStrategyFactory(config.MergeStrategyAlwaysMerge)
 
 		group := remotestoragegroup.NewRemoteGroup(

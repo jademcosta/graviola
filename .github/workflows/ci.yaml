@@ -33,3 +33,21 @@ jobs:
         cache: true
     - name: Lint
       run: make lint
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.23.1"
+        cache: true
+    - name: Start Prometheus 1
+      run: |
+        docker run -d -v ./test/e2e/prometheus/prom1/conf:/etc/prometheus -p 9091:9090 prom/prometheus:latest \
+        --config.file="/etc/prometheus/conf.yml" --web.enable-remote-write-receiver --log.level=debug
+    - name: Wait Prometheus to boot
+      run: sleep 2
+    - name: Run tests
+      run: make ci-test-e2e

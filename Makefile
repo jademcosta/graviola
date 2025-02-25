@@ -24,6 +24,12 @@ test-unit: ## Runs only fast tests
 	$(GOCMD) clean -testcache
 	$(GOTEST) -short -timeout 20s ./...
 
+ci-test-e2e: ## Run end to end tests, only suited for the CI
+	$(GOCMD) build -o graviola ./cmd/...
+	./graviola --config test/e2e/config.yaml &
+	@sleep 3
+	$(GOCMD) run ./test/e2e/...
+
 coverage: ## Run the tests of the project and export the coverage
 	$(GOCMD) clean -testcache
 	$(GOTEST) -timeout 30s -cover -covermode=count -coverprofile=profile.cov ./...
@@ -31,14 +37,6 @@ coverage: ## Run the tests of the project and export the coverage
 
 ## Lint:
 lint: ## Run all available linters
-# $(GOCMD) install honnef.co/go/tools/cmd/staticcheck@latest
-# $(GOCMD) install github.com/kisielk/errcheck@latest
-# $(GOCMD) install golang.org/x/lint/golint@latest
-# $(GOVET) -lostcancel=false ./...
-# staticcheck ./...
-# errcheck ./...
-# golint ./...
-# curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 	$(GOCMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	golangci-lint run
 

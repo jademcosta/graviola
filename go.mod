@@ -5,7 +5,10 @@ go 1.23.0
 toolchain go1.23.1
 
 require (
+	github.com/buger/jsonparser v1.1.1
 	github.com/go-chi/chi/v5 v5.2.1
+	github.com/gogo/protobuf v1.3.2
+	github.com/golang/snappy v0.0.4
 	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc
 	github.com/oklog/run v1.1.0
 	github.com/prometheus/client_golang v1.20.5
@@ -46,9 +49,7 @@ require (
 	github.com/go-openapi/strfmt v0.23.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
