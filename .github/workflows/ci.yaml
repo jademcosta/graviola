@@ -45,7 +45,7 @@ jobs:
         cache: true
     - name: Start Prometheus 1
       run: |
-        docker run -d prom/prometheus:latest -v ./test/e2e/prometheus/prom1/conf:/etc/prometheus -p 9090:9090 \
+        docker run -d -v ./test/e2e/prometheus/prom1/conf:/etc/prometheus -p 9090:9090 prom/prometheus:latest \
         --config.file="/etc/prometheus/conf.yml" --web.enable-remote-write-receiver --log.level=debug
     - name: Wait Prometheus to boot
       run: sleep 2
