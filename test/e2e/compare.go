@@ -79,7 +79,7 @@ func checkMetricsExist(timeSeries prompb.TimeSeries, prometheusURL string) error
 
 			valuesSet[floatValue] = struct{}{}
 		},
-		"data", "result", "values")
+		"data", "result", "[0]", "values")
 
 	if err != nil {
 		return fmt.Errorf("when iterating on response: %w", err)
