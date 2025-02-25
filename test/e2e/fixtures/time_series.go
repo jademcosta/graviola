@@ -10,7 +10,7 @@ var CurrentTimestamp = time.Now()
 var ThirtyMinAgo = CurrentTimestamp.Add(-30 * time.Minute)
 
 // A single counter metric with multiple samples
-var SingleMetricCounterFixture = &prompb.WriteRequest{
+var SingleCounterMetric = &prompb.WriteRequest{
 	Timeseries: []prompb.TimeSeries{
 		{
 			Labels: []prompb.Label{

@@ -28,7 +28,7 @@ ci-test-e2e: ## Run end to end tests, only suited for the CI
 	$(GOCMD) build -o graviola ./cmd/...
 	./graviola --config test/e2e/config.yaml &
 	@sleep 3
-	$(GOCMD) run ./test/e2e/main.go
+	$(GOCMD) run ./test/e2e/...
 
 coverage: ## Run the tests of the project and export the coverage
 	$(GOCMD) clean -testcache
