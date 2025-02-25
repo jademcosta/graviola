@@ -11,6 +11,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	"github.com/jademcosta/graviola/test/e2e/fixtures"
 	"github.com/prometheus/prometheus/prompb"
 )
 
@@ -83,7 +84,7 @@ func execRemoteQuery(
 		"query": {query},
 		"start": {start.Format(time.RFC3339)},
 		"end":   {end.Format(time.RFC3339)},
-		"step":  {"15s"},
+		"step":  {fmt.Sprintf("%ds", fixtures.MetricStep)},
 	}
 
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", prometheusURL, path), strings.NewReader(formData.Encode()))
