@@ -36,21 +36,6 @@ jobs:
 
   e2e-tests:
     runs-on: ubuntu-latest
-    # services:
-    #   prometheus_1:
-    #     image: prom/prometheus:latest
-    #     # Map port 9091 on the Docker host to port 9090 on the Prometheus container
-    #     ports:
-    #       - 9091:9090
-    #     volumes:
-    #       - ./test/e2e/prom1/conf/conf.yml:/etc/prometheus/prometheus.yml
-      # prometheus_2:
-      #   image: prom/prometheus:latest
-      #   # Map port 9092 on the Docker host to port 9090 on the Prometheus container
-      #   ports:
-      #     - 9092:9090
-      #   volumes:
-      #     - test/e2e/prom2/conf:/etc/prometheus
     steps:
     - uses: actions/checkout@v4
     - name: Setup Go

@@ -24,7 +24,7 @@ test-unit: ## Runs only fast tests
 	$(GOCMD) clean -testcache
 	$(GOTEST) -short -timeout 20s ./...
 
-test-e2e:
+ci-test-e2e: ## Run end to end tests, only suited for the CI
 	$(GOCMD) build -o graviola ./cmd/...
 	./graviola --config test/e2e/config.yaml &
 	@sleep 3
