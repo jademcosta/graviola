@@ -91,6 +91,13 @@ func checkMetricsExist(timeSeries prompb.TimeSeries, prometheusURL string) error
 			timeSeries.Samples, responsePrometheus)
 	}
 
+	for _, expectedSample := range timeSeries.Samples {
+		_, found := valuesSet[expectedSample.Value]
+		if !found {
+			return fmt.Errorf("value %v was expected but not found on %v", expectedSample.Value, valuesSet)
+		}
+	}
+
 	// responsePrometheus:
 	// {
 	// 	"status":"success",
