@@ -37,14 +37,6 @@ coverage: ## Run the tests of the project and export the coverage
 
 ## Lint:
 lint: ## Run all available linters
-# $(GOCMD) install honnef.co/go/tools/cmd/staticcheck@latest
-# $(GOCMD) install github.com/kisielk/errcheck@latest
-# $(GOCMD) install golang.org/x/lint/golint@latest
-# $(GOVET) -lostcancel=false ./...
-# staticcheck ./...
-# errcheck ./...
-# golint ./...
-# curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 	$(GOCMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	golangci-lint run
 
