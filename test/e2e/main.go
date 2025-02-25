@@ -18,13 +18,16 @@ var httpCli = &http.Client{
 }
 
 func main() {
-	err := sendMetricsTo(fixtures.SingleCounterMetric, prometheus1URLWithPath)
+	err := sendMetricsToPrometheus(fixtures.SingleCounterMetric, prometheus1URLWithPath)
 	if err != nil {
 		panic(err)
 	}
 
 	for idx, ts := range fixtures.SingleCounterMetric.Timeseries {
-		// err = ensureMetricsExist() //FIXME: I need to make sure metrics were ingested.
+		err = checkMetricsExist(ts, prometheus1URLWithPath)
+		if err != nil {
+			panic(fmt.Errorf("metric existence not confirmed on index %d: %w", idx, err))
+		}
 
 		err = checkMetricsMatch(ts, graviolaURLWithPath, prometheus1URLWithPath)
 		if err != nil {

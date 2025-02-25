@@ -51,7 +51,7 @@ func successStatus(statusCode int) bool {
 	return statusCode/200 == 1
 }
 
-func sendMetricsTo(writeRequest *prompb.WriteRequest, prometheusURL string) error {
+func sendMetricsToPrometheus(writeRequest *prompb.WriteRequest, prometheusURL string) error {
 
 	request1, err := buildWriteRequest(writeRequest.Timeseries, nil)
 	if err != nil {
