@@ -55,4 +55,4 @@ storages:
       # [mandatory] The list of remote storages that belongs to this group
       remotes:
         - name: "prometheus 1"
-          address: "http://localhost:9090"
+          address: "http://localhost:9091"
