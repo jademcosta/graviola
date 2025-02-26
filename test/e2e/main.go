@@ -39,6 +39,8 @@ func main() {
 		panic(fmt.Errorf("comparsion error on second sample : %w", err))
 	}
 
+	checkItCanMixAllPrometheusData(graviolaURLWithPath, fixtures.SumQuery)
+
 	os.Exit(0)
 }
 

@@ -9,6 +9,9 @@ import (
 // This is the rate at which metrics will be generated, and should be used as step when querying
 const MetricStep = 15
 
+// A `sum` query which will select all the data
+const SumQuery = `sum({__name__="http_requests_total",job="sys"})`
+
 var CurrentTimestamp = time.Now()
 var ThirtyMinAgo = CurrentTimestamp.Add(-30 * time.Minute)
 
@@ -74,4 +77,18 @@ var SingleCounterMetric3 = &prompb.WriteRequest{
 			},
 		},
 	},
+}
+
+// The expected values on each moment of the SumQuery query
+func CalculateSumQueryAnswer() []float64 {
+	answer := make([]float64, 0)
+	for sampleIdx, sample := range SingleCounterMetric.Timeseries[0].Samples {
+		total := sample.Value +
+			SingleCounterMetric2.Timeseries[0].Samples[sampleIdx].Value +
+			SingleCounterMetric3.Timeseries[0].Samples[sampleIdx].Value
+
+		answer = append(answer, total)
+	}
+
+	return answer
 }
