@@ -47,7 +47,11 @@ jobs:
       run: |
         docker run -d -v ./test/e2e/prometheus/prom1/conf:/etc/prometheus -p 9091:9090 prom/prometheus:latest \
         --config.file="/etc/prometheus/conf.yml" --web.enable-remote-write-receiver --log.level=debug
-    - name: Wait Prometheus to boot
+    - name: Start Prometheus 2
+      run: |
+        docker run -d -v ./test/e2e/prometheus/prom2/conf:/etc/prometheus -p 9092:9090 prom/prometheus:latest \
+        --config.file="/etc/prometheus/conf.yml" --web.enable-remote-write-receiver --log.level=debug
+    - name: Wait Prometheis boot
       run: sleep 2
     - name: Run tests
       run: make ci-test-e2e

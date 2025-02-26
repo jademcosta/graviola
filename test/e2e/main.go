@@ -12,6 +12,7 @@ import (
 
 const apiVersionPath = "/api/v1"
 const prometheus1URLWithPath = "http://localhost:9091" + apiVersionPath
+const prometheus2URLWithPath = "http://localhost:9092" + apiVersionPath
 const graviolaURLWithPath = "http://localhost:9197" + apiVersionPath
 
 var httpCli = &http.Client{
@@ -19,22 +20,64 @@ var httpCli = &http.Client{
 }
 
 func main() {
+	sendMetricsToRemotes()
+
+	checkMetricsWereReallySent()
+
+	err := checkMetricsMatch(fixtures.SingleCounterMetric.Timeseries[0], graviolaURLWithPath, prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("comparsion error on first sample: %w", err))
+	}
+
+	err = checkMetricsMatch(fixtures.SingleCounterMetric2.Timeseries[0], graviolaURLWithPath, prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("comparsion error on second sample : %w", err))
+	}
+
+	err = checkMetricsMatch(fixtures.SingleCounterMetric3.Timeseries[0], graviolaURLWithPath, prometheus2URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("comparsion error on second sample : %w", err))
+	}
+
+	checkItCanMixAllPrometheusData(graviolaURLWithPath, fixtures.SumQuery)
+
+	os.Exit(0)
+}
+
+func sendMetricsToRemotes() {
+	// Prometheus 1
 	err := sendMetricsToPrometheus(fixtures.SingleCounterMetric, prometheus1URLWithPath)
 	if err != nil {
 		panic(err)
 	}
 
-	for idx, ts := range fixtures.SingleCounterMetric.Timeseries {
-		err = checkMetricsExist(ts, prometheus1URLWithPath)
-		if err != nil {
-			panic(fmt.Errorf("metric existence not confirmed on index %d: %w", idx, err))
-		}
-
-		err = checkMetricsMatch(ts, graviolaURLWithPath, prometheus1URLWithPath)
-		if err != nil {
-			panic(fmt.Errorf("comparsion error on index %d: %w", idx, err))
-		}
+	err = sendMetricsToPrometheus(fixtures.SingleCounterMetric2, prometheus1URLWithPath)
+	if err != nil {
+		panic(err)
 	}
 
-	os.Exit(0)
+	//Prometheus 2
+	err = sendMetricsToPrometheus(fixtures.SingleCounterMetric3, prometheus2URLWithPath)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func checkMetricsWereReallySent() {
+	//Prometheus 1
+	err := checkMetricsExist(fixtures.SingleCounterMetric.Timeseries[0], prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("metric 1 existence not confirmed on Prometheus 1: %w", err))
+	}
+
+	err = checkMetricsExist(fixtures.SingleCounterMetric2.Timeseries[0], prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("metric 2 existence not confirmed on Prometheus 1: %w", err))
+	}
+
+	//Prometheus 2
+	err = checkMetricsExist(fixtures.SingleCounterMetric3.Timeseries[0], prometheus2URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("metric 3 existence not confirmed on Prometheus 2: %w", err))
+	}
 }

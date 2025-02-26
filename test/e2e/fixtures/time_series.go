@@ -9,6 +9,9 @@ import (
 // This is the rate at which metrics will be generated, and should be used as step when querying
 const MetricStep = 15
 
+// A `sum` query which will select all the data
+const SumQuery = `sum({__name__="http_requests_total",job="sys"})`
+
 var CurrentTimestamp = time.Now()
 var ThirtyMinAgo = CurrentTimestamp.Add(-30 * time.Minute)
 
@@ -32,4 +35,60 @@ var SingleCounterMetric = &prompb.WriteRequest{
 			},
 		},
 	},
+}
+
+var SingleCounterMetric2 = &prompb.WriteRequest{
+	Timeseries: []prompb.TimeSeries{
+		{
+			Labels: []prompb.Label{
+				{Name: "__name__", Value: "http_requests_total"},
+				{Name: "region", Value: "us-east-1"},
+				{Name: "system", Value: "cd"},
+				{Name: "job", Value: "sys"},
+			},
+			Samples: []prompb.Sample{
+				{Value: 15, Timestamp: ThirtyMinAgo.Add(-MetricStep * 6 * time.Second).UnixMilli()},
+				{Value: 17, Timestamp: ThirtyMinAgo.Add(-MetricStep * 5 * time.Second).UnixMilli()},
+				{Value: 30, Timestamp: ThirtyMinAgo.Add(-MetricStep * 4 * time.Second).UnixMilli()},
+				{Value: 45, Timestamp: ThirtyMinAgo.Add(-MetricStep * 3 * time.Second).UnixMilli()},
+				{Value: 90, Timestamp: ThirtyMinAgo.Add(-MetricStep * 2 * time.Second).UnixMilli()},
+				{Value: 100, Timestamp: ThirtyMinAgo.Add(-MetricStep * time.Second).UnixMilli()},
+			},
+		},
+	},
+}
+
+var SingleCounterMetric3 = &prompb.WriteRequest{
+	Timeseries: []prompb.TimeSeries{
+		{
+			Labels: []prompb.Label{
+				{Name: "__name__", Value: "http_requests_total"},
+				{Name: "region", Value: "sa-east-1"},
+				{Name: "system", Value: "ab"},
+				{Name: "job", Value: "sys"},
+			},
+			Samples: []prompb.Sample{
+				{Value: 24, Timestamp: ThirtyMinAgo.Add(-MetricStep * 6 * time.Second).UnixMilli()},
+				{Value: 29, Timestamp: ThirtyMinAgo.Add(-MetricStep * 5 * time.Second).UnixMilli()},
+				{Value: 44, Timestamp: ThirtyMinAgo.Add(-MetricStep * 4 * time.Second).UnixMilli()},
+				{Value: 59, Timestamp: ThirtyMinAgo.Add(-MetricStep * 3 * time.Second).UnixMilli()},
+				{Value: 86, Timestamp: ThirtyMinAgo.Add(-MetricStep * 2 * time.Second).UnixMilli()},
+				{Value: 113, Timestamp: ThirtyMinAgo.Add(-MetricStep * time.Second).UnixMilli()},
+			},
+		},
+	},
+}
+
+// The expected values on each moment of the SumQuery query
+func CalculateSumQueryAnswer() []float64 {
+	answer := make([]float64, 0)
+	for sampleIdx, sample := range SingleCounterMetric.Timeseries[0].Samples {
+		total := sample.Value +
+			SingleCounterMetric2.Timeseries[0].Samples[sampleIdx].Value +
+			SingleCounterMetric3.Timeseries[0].Samples[sampleIdx].Value
+
+		answer = append(answer, total)
+	}
+
+	return answer
 }
