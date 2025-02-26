@@ -34,6 +34,11 @@ func main() {
 		panic(fmt.Errorf("comparsion error on second sample : %w", err))
 	}
 
+	err = checkMetricsMatch(fixtures.SingleCounterMetric3.Timeseries[0], graviolaURLWithPath, prometheus2URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("comparsion error on second sample : %w", err))
+	}
+
 	os.Exit(0)
 }
 

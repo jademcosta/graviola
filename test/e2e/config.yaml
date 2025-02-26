@@ -56,3 +56,5 @@ storages:
       remotes:
         - name: "prometheus 1"
           address: "http://localhost:9091"
+        - name: "prometheus 2"
+          address: "http://localhost:9092"
