@@ -165,6 +165,8 @@ func checkItCanMixAllPrometheusData(graviolaURL string, query string) {
 		panic(fmt.Errorf("when iterating on response values: %w", err))
 	}
 
+	sampleValues = dedup(sampleValues)
+
 	expectedLength := len(fixtures.CalculateSumQueryAnswer())
 	if len(sampleValues) != expectedLength {
 		panic(fmt.Errorf("the answer for sum should have %d entries, but has %d. Response was: %v. Expected values are: %v",
@@ -179,4 +181,19 @@ func parseToFloat64(val []byte) (float64, error) {
 	}
 
 	return float64(valAsInt), err
+}
+
+func dedup(input []float64) []float64 {
+	lastInsert := float64(-1.0)
+	output := make([]float64, 0)
+
+	slices.Sort(input)
+
+	for _, value := range input {
+		if lastInsert-value != 0 {
+			output = append(output, value)
+			lastInsert = value
+		}
+	}
+	return output
 }
