@@ -19,22 +19,43 @@ var httpCli = &http.Client{
 }
 
 func main() {
+	sendMetricsToRemotes()
+
+	checkMetricsWereReallySent()
+
+	err := checkMetricsMatch(fixtures.SingleCounterMetric.Timeseries[0], graviolaURLWithPath, prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("comparsion error on first sample: %w", err))
+	}
+
+	err = checkMetricsMatch(fixtures.SingleCounterMetric2.Timeseries[0], graviolaURLWithPath, prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("comparsion error on second sample : %w", err))
+	}
+
+	os.Exit(0)
+}
+
+func sendMetricsToRemotes() {
 	err := sendMetricsToPrometheus(fixtures.SingleCounterMetric, prometheus1URLWithPath)
 	if err != nil {
 		panic(err)
 	}
 
-	for idx, ts := range fixtures.SingleCounterMetric.Timeseries {
-		err = checkMetricsExist(ts, prometheus1URLWithPath)
-		if err != nil {
-			panic(fmt.Errorf("metric existence not confirmed on index %d: %w", idx, err))
-		}
+	err = sendMetricsToPrometheus(fixtures.SingleCounterMetric2, prometheus1URLWithPath)
+	if err != nil {
+		panic(err)
+	}
+}
 
-		err = checkMetricsMatch(ts, graviolaURLWithPath, prometheus1URLWithPath)
-		if err != nil {
-			panic(fmt.Errorf("comparsion error on index %d: %w", idx, err))
-		}
+func checkMetricsWereReallySent() {
+	err := checkMetricsExist(fixtures.SingleCounterMetric.Timeseries[0], prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("metric 1 existence not confirmed: %w", err))
 	}
 
-	os.Exit(0)
+	err = checkMetricsExist(fixtures.SingleCounterMetric2.Timeseries[0], prometheus1URLWithPath)
+	if err != nil {
+		panic(fmt.Errorf("metric 2 existence not confirmed: %w", err))
+	}
 }
