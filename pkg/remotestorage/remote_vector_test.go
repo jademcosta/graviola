@@ -144,7 +144,12 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 		},
 	}
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	for _, tc := range testCases {
 		response = &tc.answer
@@ -175,7 +180,12 @@ func TestParsesVectorResponseCorrectlyWithNaN(t *testing.T) {
 	remoteSrv := httptest.NewServer(mockRemote.mux)
 	defer remoteSrv.Close()
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
 	resultParsed := result.(*domain.GraviolaSeriesSet) //nolint: forcetypeassert

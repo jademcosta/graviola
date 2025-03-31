@@ -72,7 +72,12 @@ func TestParsesMatrixResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 		},
 	}
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	for _, tc := range testCases {
 
@@ -124,7 +129,12 @@ func TestParsesMatrixResponseCorrectlyWithNaNs(t *testing.T) {
 	remoteSrv := httptest.NewServer(mockRemote.mux)
 	defer remoteSrv.Close()
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
 	assert.Lenf(t, result.(*domain.GraviolaSeriesSet).Series, 1, "should have 1 serie")

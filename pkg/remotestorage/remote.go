@@ -36,12 +36,16 @@ type RemoteStorage struct {
 	now    func() time.Time
 }
 
-func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() time.Time) *RemoteStorage {
+func NewRemoteStorage(
+	logg *slog.Logger, conf config.RemoteConfig, now func() time.Time, timeout time.Duration,
+) *RemoteStorage {
 	return &RemoteStorage{
-		logg:   logg.With("name", conf.Name, "component", "remote"),
-		URLs:   generateURLs(conf),
-		client: &http.Client{}, //TODO: allow to config this
-		now:    now,
+		logg: logg.With("name", conf.Name, "component", "remote"),
+		URLs: generateURLs(conf),
+		client: &http.Client{
+			Timeout: timeout,
+		},
+		now: now,
 	}
 }
 
