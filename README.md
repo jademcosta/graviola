@@ -16,6 +16,17 @@ This is the "mostly" prioritized roadmap. I may change it as I will, though:
 
 * More meaningful metrics. Right now, it doesn't have many metrics and this mean a less than ideal monitoring experience, which is one of the main shortcomings of other similar tools.
 * "Warnings" returned by all remotes are not being returned on Graviola. This might hide some bug in a remote.
+* Configurable timeouts for each remote (in a cascading style).
+* Compressed responses.
+* Allow to define time-windows to different remotes.
+* Allow to define default labels in a remote, both to add on every response and to allow to not even hit the remote with a query if it is possible to determine it doesn't have the data.
+* Allow to define API-KEYs to access it.
+* Allow to configure SSO access.
+* Add tracing!
+* Allow a label to be "denylisted" from a remote, meaning it will be removed from the response.
+
+
+
 
 ## Bugs and unimplemented features
 
