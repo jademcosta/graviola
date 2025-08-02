@@ -13,6 +13,26 @@ type GraviolaConfig struct {
 	QueryConf    QueryConfig    `yaml:"query"`
 }
 
+// MustParse parses the configuration from the given byte slice and panics if there is an error.
+// It also calls FillDefaults on the parsed configuration.
+// This is useful for testing or when you want to ensure that the configuration is always valid.
+func MustParse(data []byte) GraviolaConfig {
+	parsedConf := &GraviolaConfig{}
+
+	err := yaml.Unmarshal(data, parsedConf)
+	if err != nil {
+		panic(err)
+	}
+
+	conf := parsedConf.FillDefaults()
+	err = conf.IsValid()
+	if err != nil {
+		panic(err)
+	}
+
+	return conf
+}
+
 func Parse(data []byte) (GraviolaConfig, error) {
 	parsedConf := &GraviolaConfig{}
 
