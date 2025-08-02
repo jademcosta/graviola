@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"slices"
 	"sync"
 
 	"github.com/jademcosta/graviola/pkg/domain"
@@ -39,7 +40,7 @@ func (mock *RemoteStorageMock) Select(
 		return mock.SelectFn(ctx, sortSeries, hints, matchers...)
 	}
 
-	return mock.SeriesSet
+	return copyOfSeriesSet(mock.SeriesSet)
 }
 
 func (mock *RemoteStorageMock) Close() error {
@@ -110,4 +111,22 @@ func (mock *RemoteStorageMock) LabelNames(
 	}
 
 	return lblNames, *annots, err
+}
+
+func copyOfSeriesSet(original *domain.GraviolaSeriesSet) *domain.GraviolaSeriesSet {
+	if original == nil {
+		return nil
+	}
+
+	copied := &domain.GraviolaSeriesSet{
+		Series: make([]*domain.GraviolaSeries, len(original.Series)),
+	}
+
+	for i, serie := range original.Series {
+		copied.Series[i] = &domain.GraviolaSeries{
+			Lbs:        serie.Lbs.Copy(),
+			Datapoints: slices.Clone(serie.Datapoints),
+		}
+	}
+	return copied
 }

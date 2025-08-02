@@ -127,7 +127,7 @@ func TestConcurrentSelects(t *testing.T) {
 	hints := &storage.SelectHints{}
 	matchers := []*labels.Matcher{
 		{Type: labels.MatchEqual,
-			Name:  "somename",
+			Name:  "somename", //FIXME: use an existing label
 			Value: "somevalforlabel"},
 		{Type: labels.MatchEqual,
 			Name:  "somename2",
