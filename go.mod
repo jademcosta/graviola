@@ -1,8 +1,6 @@
 module github.com/jademcosta/graviola
 
-go 1.23.0
-
-toolchain go1.23.6
+go 1.24
 
 require (
 	github.com/buger/jsonparser v1.1.1
