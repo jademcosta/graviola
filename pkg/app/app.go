@@ -51,54 +51,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
-	//TODO: avoid all nils in the functions below. To avoid `panic`s
-	apiV1 := api_v1.NewAPI(
-		eng,
-		graviolaStorage,
-		nil, // storage.Appendable // seems to be Ok to be nil
-		&storageproxy.GraviolaExemplarQueryable{},
-		nil,                        // func(context.Context) ScrapePoolsRetriever
-		nil,                        // func(context.Context) TargetRetriever
-		nil,                        // func(context.Context) AlertmanagerRetriever
-		nil,                        // func() config.Config //TODO: this might panic if config endpoint is hit
-		make(map[string]string, 0), // This is used on the flags endpoint //TODO: add the config file flag
-		api_v1.GlobalURLOptions{},  // This is used on the targets endpoint
-		alwaysReadyHandler,         // TODO: do I need to use this one? It is used to prevent calling certain endpoints without being ready
-		nil,                        // TSDBAdminStats
-		"",                         // dbDir string
-		false,                      // enableAdmin bool
-		logger,
-		nil,                             // func(context.Context) RulesRetriever
-		100,                             //TODO: allow config (remoteReadSampleLimit)
-		10,                              //TODO: allow config (remoteReadConcurrencyLimit)
-		1024,                            //TODO: allow config (remoteReadMaxBytesInFrame) (currently 1KB)
-		false,                           // isAgent bool - If this is set to true the query endpoints will not work
-		grafanaregexp.MustCompile(".*"), // corsOrigin *regexp.Regexp,
-		nil,                             // runtimeInfo func() (RuntimeInfo, error)
-		&web.PrometheusVersion{
-			Version:   version.Version,
-			Revision:  version.Revision,
-			Branch:    version.Branch,
-			BuildUser: version.BuildUser,
-			BuildDate: version.BuildDate,
-			GoVersion: version.GoVersion,
-		}, // buildInfo *PrometheusVersion
-
-		func() []notifications.Notification {
-			return nil
-		}, //notificationsGetter, to get notifications to show on the UI
-		func() (<-chan notifications.Notification, func(), bool) {
-			noNotificationStreamAnswer := false
-			return nil, func() {}, noNotificationStreamAnswer
-		}, // notificationsSub, to get SSE notifications, live
-
-		metricRegistry, // gatherer prometheus.Gatherer
-		metricRegistry, // registerer prometheus.Registerer
-		nil,            // statsRenderer StatsRenderer
-		remoteWriteEnabled,
-		nil, // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
-		otlpEnabled,
-	)
+	apiV1 := createPrometheusAPI(eng, graviolaStorage, logger, metricRegistry)
 
 	metricRegistry.MustRegister(
 		collectors.NewBuildInfoCollector(),
@@ -203,4 +156,61 @@ func initializeRemotes(
 	}
 
 	return remotes
+}
+
+func createPrometheusAPI(
+	queryEngine *queryengine.GraviolaQueryEngine,
+	graviolaStorage *storageproxy.GraviolaStorage,
+	logger *slog.Logger,
+	metricRegistry *prometheus.Registry,
+) *api_v1.API {
+
+	//TODO: avoid all nils in the functions below. To avoid `panic`s
+	return api_v1.NewAPI(
+		queryEngine,
+		graviolaStorage,
+		nil, // storage.Appendable // seems to be Ok to be nil
+		&storageproxy.GraviolaExemplarQueryable{},
+		nil,                        // func(context.Context) ScrapePoolsRetriever
+		nil,                        // func(context.Context) TargetRetriever
+		nil,                        // func(context.Context) AlertmanagerRetriever
+		nil,                        // func() config.Config //TODO: this might panic if config endpoint is hit
+		make(map[string]string, 0), // This is used on the flags endpoint //TODO: add the config file flag
+		api_v1.GlobalURLOptions{},  // This is used on the targets endpoint
+		alwaysReadyHandler,         // TODO: do I need to use this one? It is used to prevent calling certain endpoints without being ready
+		nil,                        // TSDBAdminStats
+		"",                         // dbDir string
+		false,                      // enableAdmin bool
+		logger,
+		nil,                             // func(context.Context) RulesRetriever
+		100,                             //TODO: allow config (remoteReadSampleLimit)
+		10,                              //TODO: allow config (remoteReadConcurrencyLimit)
+		1024,                            //TODO: allow config (remoteReadMaxBytesInFrame) (currently 1KB)
+		false,                           // isAgent bool - If this is set to true the query endpoints will not work
+		grafanaregexp.MustCompile(".*"), // corsOrigin *regexp.Regexp,
+		nil,                             // runtimeInfo func() (RuntimeInfo, error)
+		&web.PrometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		}, // buildInfo *PrometheusVersion
+
+		func() []notifications.Notification {
+			return nil
+		}, //notificationsGetter, to get notifications to show on the UI
+		func() (<-chan notifications.Notification, func(), bool) {
+			noNotificationStreamAnswer := false
+			return nil, func() {}, noNotificationStreamAnswer
+		}, // notificationsSub, to get SSE notifications, live
+
+		metricRegistry, // gatherer prometheus.Gatherer
+		metricRegistry, // registerer prometheus.Registerer
+		nil,            // statsRenderer StatsRenderer
+		remoteWriteEnabled,
+		nil, // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
+		otlpEnabled,
+	)
 }

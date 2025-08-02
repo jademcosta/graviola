@@ -59,6 +59,10 @@ storages:
           #  end: "now"
 `
 
+func TestMustParsePanicsOnError(t *testing.T) {
+	assert.Panics(t, func() { config.MustParse([]byte("broken yaml")) }, "should panic if config is not valid")
+}
+
 func TestParse(t *testing.T) {
 	_, err := config.Parse([]byte("broken yaml"))
 	require.Error(t, err, "should result in error if config is not valid")
