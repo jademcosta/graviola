@@ -51,7 +51,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
-	apiV1 := createPrometheusApi(eng, graviolaStorage, logger, metricRegistry)
+	apiV1 := createPrometheusAPI(eng, graviolaStorage, logger, metricRegistry)
 
 	metricRegistry.MustRegister(
 		collectors.NewBuildInfoCollector(),
@@ -158,7 +158,7 @@ func initializeRemotes(
 	return remotes
 }
 
-func createPrometheusApi(
+func createPrometheusAPI(
 	queryEngine *queryengine.GraviolaQueryEngine,
 	graviolaStorage *storageproxy.GraviolaStorage,
 	logger *slog.Logger,
