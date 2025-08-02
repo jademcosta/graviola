@@ -18,7 +18,6 @@ func QueryFailureStrategyFactory(strategyName string) OnQueryFailureStrategy {
 }
 
 func MergeStrategyFactory(strategyName string) MergeStrategy {
-
 	switch strategyName {
 	case config.MergeStrategyAlwaysMerge:
 		return mergestrategy.NewAlwaysMergeStrategy()

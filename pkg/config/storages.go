@@ -5,8 +5,8 @@ import (
 )
 
 type StoragesConfig struct {
-	MergeConf MergeStrategyConfig `yaml:"merge_strategy"`
-	Groups    []GroupsConfig      `yaml:"groups"`
+	MergeConf MergeStrategyConfig  `yaml:"merge_strategy"`
+	Groups    []RemoteGroupsConfig `yaml:"groups"`
 }
 
 func (storagesConf StoragesConfig) FillDefaults() StoragesConfig {

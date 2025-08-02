@@ -9,6 +9,7 @@ import (
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup/queryfailurestrategy"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var sut = &queryfailurestrategy.PartialResponseStrategy{}
@@ -19,7 +20,7 @@ func TestForLabels(t *testing.T) {
 
 		lbls := []string{"a", "a", "b", "c"}
 		lblsResponse, err := sut.ForLabels(lbls, nil)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 		assert.Equal(t, lbls, lblsResponse, "should return all labels")
 		assert.Equal(t, &lbls, &lblsResponse, "should return the same labels")
 	})
@@ -29,10 +30,10 @@ func TestForLabels(t *testing.T) {
 
 		lbls := []string{}
 		lblsResponse, err := sut.ForLabels(lbls, nil)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 		assert.Equal(t, lbls, lblsResponse, "should return all labels")
 		assert.Equal(t, &lbls, &lblsResponse, "should return the same labels")
-		assert.Len(t, lblsResponse, 0, "should return the same labels")
+		assert.Empty(t, lblsResponse, "should return the same labels")
 
 		error1 := errors.New("some err")
 
@@ -40,12 +41,12 @@ func TestForLabels(t *testing.T) {
 		assert.Equal(t, error1, err, "should return the same error")
 		assert.Equal(t, lbls, lblsResponse, "should return all labels")
 		assert.Equal(t, &lbls, &lblsResponse, "should return the same labels")
-		assert.Len(t, lblsResponse, 0, "should return the same labels")
+		assert.Empty(t, lblsResponse, "should return the same labels")
 
 		lblsResponse, err = sut.ForLabels(nil, nil)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 		assert.Nil(t, lblsResponse, "should return all labels")
-		assert.Len(t, lblsResponse, 0, "should return the same labels")
+		assert.Empty(t, lblsResponse, "should return the same labels")
 	})
 
 	t.Run("removes the error when there is at least one valid answer", func(t *testing.T) {
@@ -55,7 +56,7 @@ func TestForLabels(t *testing.T) {
 		error1 := errors.New("some error")
 
 		lblsResponse, err := sut.ForLabels(lbls, error1)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 		assert.Equal(t, lbls, lblsResponse, "should return all labels")
 		assert.Equal(t, &lbls, &lblsResponse, "should return the same labels")
 	})
@@ -75,7 +76,7 @@ func TestForSeriesSet(t *testing.T) {
 		}
 
 		response := sut.ForSeriesSet(sSet)
-		assert.NoError(t, response.Err(), "should return no error")
+		require.NoError(t, response.Err(), "should return no error")
 		assert.Equal(t, sSet, response, "should return all seriesSet data")
 	})
 
@@ -87,7 +88,7 @@ func TestForSeriesSet(t *testing.T) {
 		}
 
 		response := sut.ForSeriesSet(sSet)
-		assert.NoError(t, response.Err(), "should return no error")
+		require.NoError(t, response.Err(), "should return no error")
 		assert.Equal(t, sSet, response, "should return the same series set")
 		assert.False(t, response.Next(), "should return the same series set")
 
@@ -97,7 +98,7 @@ func TestForSeriesSet(t *testing.T) {
 		}
 
 		response = sut.ForSeriesSet(sSet)
-		assert.NoError(t, response.Err(), "should return no error")
+		require.NoError(t, response.Err(), "should return no error")
 		assert.Equal(t, sSet, response, "should return the same series set")
 		assert.False(t, response.Next(), "should return the same series set")
 
@@ -109,7 +110,7 @@ func TestForSeriesSet(t *testing.T) {
 		}
 
 		response = sut.ForSeriesSet(sSet)
-		assert.Error(t, response.Err(), "should return the same error")
+		require.Error(t, response.Err(), "should return the same error")
 		assert.Equal(t, sSet, response, "should return the same series set")
 		assert.False(t, response.Next(), "should return the same series set")
 	})
@@ -129,7 +130,7 @@ func TestForSeriesSet(t *testing.T) {
 		}
 
 		response := sut.ForSeriesSet(sSet)
-		assert.NoError(t, response.Err(), "should return no error")
+		require.NoError(t, response.Err(), "should return no error")
 		assert.Equal(t, sSet, response, "should return the same series set (it is a pointer)")
 		assert.True(t, response.Next(), "should return the same series set")
 	})

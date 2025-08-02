@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,23 +10,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	grafanaregexp "github.com/grafana/regexp"
+	"github.com/jademcosta/graviola/pkg/api"
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
-	"github.com/jademcosta/graviola/pkg/http/httpmiddleware"
 	"github.com/jademcosta/graviola/pkg/o11y"
 	"github.com/jademcosta/graviola/pkg/queryengine"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
 	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/jademcosta/graviola/pkg/storageproxy"
+	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/util/notifications"
 	"github.com/prometheus/prometheus/web"
 	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
@@ -36,12 +33,11 @@ const remoteWriteEnabled = false
 const otlpEnabled = false
 
 type App struct {
-	api     *api_v1.API
-	router  *chi.Mux
-	logger  *slog.Logger
-	metricz *prometheus.Registry
-	Srv     *http.Server
-	conf    config.GraviolaConfig // TODO: this is needed due to the api server configs
+	api       *api.GraviolaAPI
+	logger    *slog.Logger
+	metricz   *prometheus.Registry
+	conf      config.GraviolaConfig // TODO: this is needed due to the api server configs
+	cancelCtx context.CancelFunc
 }
 
 func NewApp(conf config.GraviolaConfig) *App {
@@ -50,11 +46,128 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	eng := queryengine.NewGraviolaQueryEngine(logger, metricRegistry, conf)
 
-	graviolaStorage := storageproxy.NewGraviolaStorage(logger,
-		initializeGroups(logger, metricRegistry, conf.StoragesConf.Groups))
+	storageGroups := initializeRemoteGroups(
+		logger, metricRegistry, conf.StoragesConf.Groups, conf.QueryConf.TimeoutDuration())
+	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
+	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
-	apiV1 := api_v1.NewAPI(
-		eng,
+	apiV1 := createPrometheusAPI(eng, graviolaStorage, logger, metricRegistry)
+
+	metricRegistry.MustRegister(
+		collectors.NewBuildInfoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		collectors.NewGoCollector(
+			collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
+		),
+	)
+
+	graviolaAPI := api.NewGraviolaAPI(conf.APIConf, logger, metricRegistry, apiV1)
+
+	return &App{
+		api:     graviolaAPI,
+		logger:  logger,
+		metricz: metricRegistry,
+		conf:    conf,
+	}
+}
+
+func (app *App) Start() {
+	appCtx, cancelCtx := context.WithCancel(context.Background())
+	app.cancelCtx = cancelCtx
+
+	g := run.Group{}
+
+	g.Add(func() error {
+		return app.api.Start()
+	}, func(_ error) {
+		app.api.Stop()
+		cancelCtx()
+	})
+
+	g.Add(func() error {
+		signalsCh := make(chan os.Signal, 2)
+		signal.Notify(signalsCh, syscall.SIGINT, syscall.SIGTERM)
+
+		select {
+		case s := <-signalsCh:
+			app.logger.Info("received system signal", "signal", s.String())
+		case <-appCtx.Done():
+		}
+		return nil
+	}, func(_ error) {
+		cancelCtx()
+	})
+
+	app.logger.Info("starting Graviola")
+	err := g.Run()
+	if err != nil {
+		app.logger.Error("error after start", "error", err)
+	}
+}
+
+func (app *App) Stop() {
+	if app.cancelCtx != nil {
+		app.logger.Info("stopping Graviola")
+		app.cancelCtx()
+	} else {
+		app.logger.Error("no context cancel function registered")
+	}
+}
+
+func alwaysReadyHandler(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		f(w, r)
+	}
+}
+
+func initializeRemoteGroups(
+	logger *slog.Logger, metricz *prometheus.Registry, groupsConf []config.RemoteGroupsConfig,
+	defaultQueryTimeout time.Duration,
+) []storage.Querier {
+	groups := make([]storage.Querier, 0, len(groupsConf))
+
+	for _, groupConf := range groupsConf {
+		failureStrategy := remotestoragegroup.QueryFailureStrategyFactory(groupConf.OnQueryFailStrategy)
+		//FIXME: allow to configure this
+		mergeStrategy := remotestoragegroup.MergeStrategyFactory(config.MergeStrategyAlwaysMerge)
+
+		group := remotestoragegroup.NewRemoteGroup(
+			logger,
+			groupConf.Name,
+			initializeRemotes(logger, metricz, groupConf.Servers, defaultQueryTimeout),
+			failureStrategy,
+			mergeStrategy,
+		)
+		groups = append(groups, o11y.NewQuerierO11y(metricz, groupConf.Name, "group", group))
+	}
+
+	return groups
+}
+
+func initializeRemotes(
+	logger *slog.Logger, metricz *prometheus.Registry, remotesConf []config.RemoteConfig,
+	defaultTimeout time.Duration,
+) []storage.Querier {
+	remotes := make([]storage.Querier, 0, len(remotesConf))
+
+	for _, remoteConf := range remotesConf {
+		remote := remotestorage.NewRemoteStorage(logger, remoteConf, time.Now, defaultTimeout)
+		remotes = append(remotes, o11y.NewQuerierO11y(metricz, remoteConf.Name, "remote", remote))
+	}
+
+	return remotes
+}
+
+func createPrometheusAPI(
+	queryEngine *queryengine.GraviolaQueryEngine,
+	graviolaStorage *storageproxy.GraviolaStorage,
+	logger *slog.Logger,
+	metricRegistry *prometheus.Registry,
+) *api_v1.API {
+
+	//TODO: avoid all nils in the functions below. To avoid `panic`s
+	return api_v1.NewAPI(
+		queryEngine,
 		graviolaStorage,
 		nil, // storage.Appendable // seems to be Ok to be nil
 		&storageproxy.GraviolaExemplarQueryable{},
@@ -68,7 +181,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 		nil,                        // TSDBAdminStats
 		"",                         // dbDir string
 		false,                      // enableAdmin bool
-		graviolalog.AdaptToGoKitLogger(logger),
+		logger,
 		nil,                             // func(context.Context) RulesRetriever
 		100,                             //TODO: allow config (remoteReadSampleLimit)
 		10,                              //TODO: allow config (remoteReadConcurrencyLimit)
@@ -84,105 +197,20 @@ func NewApp(conf config.GraviolaConfig) *App {
 			BuildDate: version.BuildDate,
 			GoVersion: version.GoVersion,
 		}, // buildInfo *PrometheusVersion
+
+		func() []notifications.Notification {
+			return nil
+		}, //notificationsGetter, to get notifications to show on the UI
+		func() (<-chan notifications.Notification, func(), bool) {
+			noNotificationStreamAnswer := false
+			return nil, func() {}, noNotificationStreamAnswer
+		}, // notificationsSub, to get SSE notifications, live
+
 		metricRegistry, // gatherer prometheus.Gatherer
 		metricRegistry, // registerer prometheus.Registerer
 		nil,            // statsRenderer StatsRenderer
 		remoteWriteEnabled,
+		nil, // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
 		otlpEnabled,
 	)
-
-	metricRegistry.MustRegister(
-		collectors.NewBuildInfoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		collectors.NewGoCollector(
-			collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
-		),
-	)
-
-	router := chi.NewRouter()
-
-	router.Use(httpmiddleware.NewLoggingMiddleware(logger))
-	router.Use(httpmiddleware.NewMetricsMiddleware(metricRegistry))
-	router.Use(middleware.Recoverer)
-
-	router.Get("/metrics", promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry}).ServeHTTP)
-	router.Get("/healthy", alwaysSuccessfulHandler)
-	router.Get("/ready", alwaysSuccessfulHandler)
-
-	subRouter := route.New()
-	subRouter = subRouter.WithPrefix("/api/v1")
-	apiV1.Register(subRouter)
-	router.Handle("/*", subRouter)
-
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", conf.ApiConf.Port), Handler: router} //TODO: extract and allow config
-
-	return &App{
-		api:     apiV1,
-		router:  router,
-		logger:  logger,
-		metricz: metricRegistry,
-		Srv:     srv,
-		conf:    conf,
-	}
-}
-
-func (app *App) Start() {
-	go func() {
-		signalsCh := make(chan os.Signal, 2)
-		signal.Notify(signalsCh, syscall.SIGINT, syscall.SIGTERM)
-
-		s := <-signalsCh
-		app.logger.Info("received signal", "signal", s.String())
-		app.Stop()
-	}()
-
-	app.logger.Info("Starting server...")
-	app.logger.Error("listenandserve exited", "error", fmt.Errorf("on serving HTTP: %w", app.Srv.ListenAndServe()))
-}
-
-func (app *App) Stop() {
-	ctx, cancelFn := context.WithTimeout(context.Background(), app.conf.ApiConf.TimeoutDuration())
-	defer cancelFn()
-
-	app.logger.Info("shutting down")
-
-	err := app.Srv.Shutdown(ctx)
-	if err != nil {
-		app.logger.Error("error when sutting down", "error", err)
-	}
-	app.logger.Info("shutdown finished")
-}
-
-func alwaysReadyHandler(f http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		f(w, r)
-	}
-}
-
-func initializeGroups(logger *slog.Logger, metricz *prometheus.Registry, groupsConf []config.GroupsConfig) []storage.Querier {
-	groups := make([]storage.Querier, 0, len(groupsConf))
-
-	for _, groupConf := range groupsConf {
-		failureStrategy := remotestoragegroup.QueryFailureStrategyFactory(groupConf.OnQueryFailStrategy)
-		group := remotestoragegroup.NewGroup(
-			logger, groupConf.Name, initializeRemotes(logger, metricz, groupConf.Servers), failureStrategy)
-		groups = append(groups, o11y.NewQuerierO11y(metricz, groupConf.Name, "group", group))
-	}
-
-	return groups
-}
-
-func initializeRemotes(logger *slog.Logger, metricz *prometheus.Registry, remotesConf []config.RemoteConfig) []storage.Querier {
-	remotes := make([]storage.Querier, 0, len(remotesConf))
-
-	for _, remoteConf := range remotesConf {
-		remote := remotestorage.NewRemoteStorage(logger, remoteConf, time.Now)
-		remotes = append(remotes, o11y.NewQuerierO11y(metricz, remoteConf.Name, "remote", remote))
-	}
-
-	return remotes
-}
-
-func alwaysSuccessfulHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }

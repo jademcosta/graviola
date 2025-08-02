@@ -11,13 +11,16 @@ import (
 	"time"
 
 	"github.com/jademcosta/graviola/pkg/config"
+	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
 	"github.com/jademcosta/graviola/pkg/remotestorage"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+var dummyTimeout = 100 * time.Millisecond
 var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 var frozenTime = time.Now()
 
@@ -111,7 +114,12 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 		},
 	}
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	for idx, tc := range testCases {
 		result := sut.Select(context.Background(), true, tc.hints, tc.matchers...)
@@ -124,7 +132,7 @@ func TestMarshalsTheQueryPayloadCorrectly(t *testing.T) {
 		} else {
 			sentPayload, err = url.PathUnescape(bodiesRangeQuery[idx])
 		}
-		assert.NoError(t, err, "should not error here")
+		require.NoError(t, err, "should not error here")
 		assert.Equal(t, tc.expected, sentPayload, "should have sent the correct payload")
 	}
 }
@@ -136,9 +144,8 @@ func TestUsesTheContextParameter(t *testing.T) {
 	defer cancelFn()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, _ *http.Request) {
 
-		// time.Sleep(200 * time.Millisecond)
 		ddl, ok := ctx.Deadline()
 		assert.True(t, ok, "should have a deadline set")
 		assert.Equal(t, deadline, ddl, "should have the same deadline")
@@ -155,9 +162,50 @@ func TestUsesTheContextParameter(t *testing.T) {
 	}
 	hints := &storage.SelectHints{}
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	result := sut.Select(ctx, true, hints, matchers...)
 	assert.NotNil(t, result, "result should not be nil")
 	time.Sleep(50 * time.Millisecond)
+}
+
+func TestRespectsTimeout(t *testing.T) {
+
+	ctx := context.Background()
+	mux := http.NewServeMux()
+
+	mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(50 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1702174837.986,"77"]}]}}`))
+		panicOnError(err)
+	})
+
+	remoteSrv := httptest.NewServer(mux)
+	defer remoteSrv.Close()
+
+	matchers := []*labels.Matcher{
+		labels.MustNewMatcher(labels.MatchEqual, "labelName", "labelVal"),
+	}
+	hints := &storage.SelectHints{}
+
+	localTimeout := 20 * time.Millisecond
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		localTimeout,
+	)
+
+	result := sut.Select(ctx, true, hints, matchers...)
+	assert.NotNil(t, result, "result should not be nil")
+
+	gSeriesSet, ok := result.(*domain.GraviolaSeriesSet)
+	assert.True(t, ok, "should have the expected type")
+	assert.Error(t, gSeriesSet.Erro, "should have returned an error due to timeout")
 }

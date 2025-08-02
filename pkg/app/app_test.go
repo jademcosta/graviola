@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,7 +58,8 @@ func TestOperationalRoutes(t *testing.T) {
 	for _, tc := range testCases {
 
 		resp, err := http.Get(fmt.Sprintf("http://localhost:8091%s", tc.path))
-		assert.NoError(t, err, "request should return no error")
+		require.NoError(t, err, "request should return no error")
+		defer resp.Body.Close()
 
 		assert.Equal(t, tc.statusCode, resp.StatusCode, "HTTP status should be %d", tc.statusCode)
 	}
@@ -104,6 +106,7 @@ func TestIntegrationAnswers422OnRemoteError(t *testing.T) {
 
 		resp := doRequest("http://localhost:8091/api/v1/query", storage.SelectHints{},
 			labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode, "HTTP status should be 422")
 
 		body, err := io.ReadAll(resp.Body)
@@ -155,7 +158,8 @@ func TestIntegrationQueryEngineUsesTheLookbackDelta(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	queryURL := "http://localhost:8091/api/v1/query"
-	doRequest(queryURL, storage.SelectHints{}, labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
+	resp := doRequest(queryURL, storage.SelectHints{}, labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
+	defer resp.Body.Close()
 
 	currentTime := time.Now()
 
@@ -170,7 +174,8 @@ func TestIntegrationQueryEngineUsesTheLookbackDelta(t *testing.T) {
 	assert.Equal(t, "{lbl1=\"val1\",}", mockRemote1.calledWith[0].Form.Get("query"), "the query should be present")
 
 	queryURL = "http://localhost:8091/api/v1/query_range"
-	doRequest(queryURL, storage.SelectHints{Start: 12145, End: 12595, Step: 11}, labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
+	resp = doRequest(queryURL, storage.SelectHints{Start: 12145, End: 12595, Step: 11}, labels.MustNewMatcher(labels.MatchEqual, "lbl1", "val1"))
+	defer resp.Body.Close()
 
 	end = mustParseInt64(mockRemote1.calledWith[1].Form.Get("end"))
 	start = mustParseInt64(mockRemote1.calledWith[1].Form.Get("start"))
@@ -245,9 +250,9 @@ func TestIntegrationSingleRemoteSuccess(t *testing.T) {
 			queryURL = fmt.Sprintf("http://localhost:8091%s", tc.route)
 		}
 
-		resp := doRequest(
-			queryURL, tc.hints, labels.MustNewMatcher(labels.MatchEqual, "lbl111", "value111"),
-		)
+		resp := doRequest(queryURL, tc.hints,
+			labels.MustNewMatcher(labels.MatchEqual, "lbl111", "value111"))
+		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
 		panicOnError(err)

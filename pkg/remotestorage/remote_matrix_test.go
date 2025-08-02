@@ -20,6 +20,7 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParsesMatrixResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
@@ -32,7 +33,7 @@ func TestParsesMatrixResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 	mockRemote := MockRemote{
 		mux: http.NewServeMux(),
 	}
-	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
+	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(*response))
 		if err != nil {
 			panic(err)
@@ -71,7 +72,12 @@ func TestParsesMatrixResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 		},
 	}
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	for _, tc := range testCases {
 
@@ -87,7 +93,10 @@ func TestParsesMatrixResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 
 		response = &tc.answer
 		result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
-		assert.Lenf(t, result.(*domain.GraviolaSeriesSet).Series, tc.seriesCount, "should have %d series", tc.seriesCount)
+		assert.Lenf(
+			t, result.(*domain.GraviolaSeriesSet).Series, tc.seriesCount, "should have %d series", // nolint: forcetypeassert
+			tc.seriesCount,
+		)
 
 		for idx, resultSeries := range series {
 			assert.Equal(t, series[idx], resultSeries, "series should match")
@@ -99,6 +108,7 @@ func TestParsesMatrixResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 
 // Reading reflect.DeepEqual docs, NaN values are NEVER equal to another NaN. As such,
 // they cannot be compared.
+// nolint: forcetypeassert
 func TestParsesMatrixResponseCorrectlyWithNaNs(t *testing.T) {
 
 	defaultHints := storage.SelectHints{}
@@ -109,7 +119,7 @@ func TestParsesMatrixResponseCorrectlyWithNaNs(t *testing.T) {
 	mockRemote := MockRemote{
 		mux: http.NewServeMux(),
 	}
-	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
+	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(response))
 		if err != nil {
 			panic(err)
@@ -119,7 +129,12 @@ func TestParsesMatrixResponseCorrectlyWithNaNs(t *testing.T) {
 	remoteSrv := httptest.NewServer(mockRemote.mux)
 	defer remoteSrv.Close()
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
 	assert.Lenf(t, result.(*domain.GraviolaSeriesSet).Series, 1, "should have 1 serie")
@@ -162,14 +177,14 @@ func extractSeriesFrom(t *testing.T, remoteAnswer string) []*domain.GraviolaSeri
 
 	var tempMap map[string]*json.RawMessage
 	err := json.Unmarshal([]byte(remoteAnswer), &tempMap)
-	assert.NoError(t, err, "should not return error")
+	require.NoError(t, err, "should not return error")
 
 	err = json.Unmarshal(*tempMap["data"], &tempMap)
-	assert.NoError(t, err, "should not return error")
+	require.NoError(t, err, "should not return error")
 
 	var metrics model.Matrix
 	err = json.Unmarshal(*tempMap["result"], &metrics)
-	assert.NoError(t, err, "should not return error")
+	require.NoError(t, err, "should not return error")
 
 	series := make([]*domain.GraviolaSeries, 0)
 

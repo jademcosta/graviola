@@ -18,63 +18,102 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+const rangeQueryLookback = 2 * time.Hour
+
 var conf config.GraviolaConfig = config.GraviolaConfig{
-	ApiConf: config.ApiConfig{
-		Timeout: "3m",
-	},
 	QueryConf: config.QueryConfig{
 		MaxSamples:        1000,
 		LookbackDelta:     config.DefaultQueryLookbackDelta,
 		ConcurrentQueries: 1,
+		Timeout:           "3m",
 	},
 }
 
+var currentTime = time.Now()
+
 var queryTestCases = []struct {
-	hintsFunc     func() *storage.SelectHints
-	query         string
-	labelMatchers [][]labels.Matcher
+	//This is a function type only to be able to do some nil checking for cases where we have
+	// no expected hints
+	expectedHintsInstantQueryFunc func() *storage.SelectHints
+	expectedHintsRangeQueryFunc   func() *storage.SelectHints
+	query                         string
+	expectedLabelMatchers         [][]labels.Matcher
 }{
-	{nil, "up", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
-	{nil, "count(up)", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
-	{nil, "sum(up)", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
-	{nil, "rate(up[5m])", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
-	{nil, "sum(rate(up[5m])) by(instance)", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
-	{nil, `topk(4, sum(up) by(account))`, [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
+	{nil, nil, "up", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
+	{nil, nil, "count(up)", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
+	{nil, nil, "sum(up)", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
+	{nil, nil, "rate(up[5m])", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
+	{nil, nil, "sum(rate(up[5m])) by(instance)", [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
+	{nil, nil, `topk(4, sum(up) by(account))`, [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}}},
 	{
 		func() *storage.SelectHints {
-			return &storage.SelectHints{Start: time.Unix(12345678, 0).Add(-5 * time.Minute).UnixMilli(), End: time.Unix(12345678, 0).UnixMilli()}
+			return &storage.SelectHints{
+				Start: currentTime.Add(-15 * time.Minute).Add(time.Millisecond).UnixMilli(),
+				End:   currentTime.UnixMilli(),
+			}
+		},
+		func() *storage.SelectHints {
+			return &storage.SelectHints{
+				Start: currentTime.Add(-rangeQueryLookback).Add(-15 * time.Minute).Add(time.Millisecond).UnixMilli(),
+				End:   currentTime.UnixMilli(),
+			}
+		},
+		"rate(up[15m])",
+		[][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}},
+	},
+	{
+		func() *storage.SelectHints {
+			return &storage.SelectHints{
+				Start: time.Unix(12345678, 0).Add(-5 * time.Minute).Add(time.Millisecond).UnixMilli(),
+				End:   time.Unix(12345678, 0).UnixMilli(),
+			}
+		},
+		func() *storage.SelectHints {
+			return &storage.SelectHints{
+				Start: time.Unix(12345678, 0).Add(-5 * time.Minute).Add(time.Millisecond).UnixMilli(),
+				End:   time.Unix(12345678, 0).UnixMilli(),
+			}
 		},
 		`sum(up @ 12345678)`, [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}},
 	},
 	{
 		func() *storage.SelectHints {
 			return &storage.SelectHints{
-				Start: time.Now().Add(-2 * time.Hour).Add(-5 * time.Minute).UnixMilli(),
-				End:   time.Now().UnixMilli(),
+				Start: currentTime.Add(-2 * time.Hour).Add(-5 * time.Minute).Add(time.Millisecond).UnixMilli(),
+				End:   currentTime.UnixMilli(),
 				Step:  300000,
 			}
 		},
-		`sum(up) [2h:5m]`, [][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}},
+		func() *storage.SelectHints {
+			return &storage.SelectHints{
+				Start: currentTime.Add(-2 * time.Hour).Add(-5 * time.Minute).Add(time.Millisecond).UnixMilli(),
+				End:   currentTime.UnixMilli(),
+				Step:  300000,
+			}
+		},
+		`sum(up) [2h:5m]`,
+		[][]labels.Matcher{{{Type: labels.MatchEqual, Name: "__name__", Value: "up"}}},
 	},
-	{nil, `topk(4, sum(up{region="abc"}) by(account))`,
+	{nil, nil, `topk(4, sum(up{region="abc"}) by(account))`,
 		[][]labels.Matcher{{
 			{Type: labels.MatchEqual, Name: "region", Value: "abc"},
 			{Type: labels.MatchEqual, Name: "__name__", Value: "up"},
 		}}},
-	{nil, "sum(rate(some_sum[5m])) by(instance) / sum(rate(some_count[5m])) by(instance)",
+	{nil, nil, "sum(rate(some_sum[5m])) by(instance) / sum(rate(some_count[5m])) by(instance)",
 		[][]labels.Matcher{
 			{{Type: labels.MatchEqual, Name: "__name__", Value: "some_sum"}},
 			{{Type: labels.MatchEqual, Name: "__name__", Value: "some_count"}},
 		},
 	},
-	{nil, `histogram_quantile(0.9, sum(rate(http_requests_total[5m])))`,
+	{nil, nil, `histogram_quantile(0.9, sum(rate(http_requests_total[5m])))`,
 		[][]labels.Matcher{
 			{{Type: labels.MatchEqual, Name: "__name__", Value: "http_requests_total"}},
 		},
 	},
-	{nil, `histogram_quantile(0.9, sum(rate(http_requests_total{instance="127.0.0.1"}[5m])))`,
+	{nil, nil, `histogram_quantile(0.9, sum(rate(http_requests_total{instance="127.0.0.1"}[5m])))`,
 		[][]labels.Matcher{
 			{
 				{Type: labels.MatchEqual, Name: "instance", Value: "127.0.0.1"},
@@ -82,7 +121,7 @@ var queryTestCases = []struct {
 			},
 		},
 	},
-	{nil, `sum(rate(some_sum[5m])) by(instance) / on() sum(rate(some_count{instance="1234"}[5m]))`,
+	{nil, nil, `sum(rate(some_sum[5m])) by(instance) / on(somerandomaaa) sum(rate(some_count{instance="1234"}[5m]))`,
 		[][]labels.Matcher{
 			{{Type: labels.MatchEqual, Name: "__name__", Value: "some_sum"}},
 			{
@@ -91,7 +130,7 @@ var queryTestCases = []struct {
 			},
 		},
 	},
-	{nil, `some_sum{instance="1234"} / some_count{instance="1234"}`,
+	{nil, nil, `some_sum{instance="1234"} / some_count{instance="1234"}`,
 		[][]labels.Matcher{
 			{
 				{Type: labels.MatchEqual, Name: "instance", Value: "1234"},
@@ -103,7 +142,7 @@ var queryTestCases = []struct {
 			},
 		},
 	},
-	{nil, `some_count{instance="5678"} / some_count{instance="1234"}`,
+	{nil, nil, `some_count{instance="5678"} / some_count{instance="1234"}`,
 		[][]labels.Matcher{
 			{
 				{Type: labels.MatchEqual, Name: "instance", Value: "5678"},
@@ -115,7 +154,7 @@ var queryTestCases = []struct {
 			},
 		},
 	},
-	{nil, `some_count{instance="5678"} + some_count{instance="1234"} * 2`,
+	{nil, nil, `some_count{instance="5678"} + some_count{instance="1234"} * 2`,
 		[][]labels.Matcher{
 			{
 				{Type: labels.MatchEqual, Name: "instance", Value: "5678"},
@@ -128,7 +167,7 @@ var queryTestCases = []struct {
 		},
 	},
 	//TODO: maybe an internal cache could help with this case
-	{nil, `some_count{instance="5678"} + some_count{instance="1234"} * some_count{instance="5678"}`,
+	{nil, nil, `some_count{instance="5678"} + some_count{instance="1234"} * some_count{instance="5678"}`,
 		[][]labels.Matcher{
 			{
 				{Type: labels.MatchEqual, Name: "instance", Value: "5678"},
@@ -145,7 +184,7 @@ var queryTestCases = []struct {
 		},
 	},
 	//TODO: maybe an internal cache could help with this case
-	{nil, `some_count{instance="5678"} + some_count{instance="5678"} * some_count{instance="5678"}`,
+	{nil, nil, `some_count{instance="5678"} + some_count{instance="5678"} * some_count{instance="5678"}`,
 		[][]labels.Matcher{
 			{
 				{Type: labels.MatchEqual, Name: "instance", Value: "5678"},
@@ -175,7 +214,7 @@ type MockQuerier struct {
 	selectReturn     storage.SeriesSet
 }
 
-func (mock *MockQuerier) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
+func (mock *MockQuerier) Select(_ context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
 	mock.selectCalledWith = append(mock.selectCalledWith, selectCalled{
 		sortSeries: sortSeries,
 		hints:      hints,
@@ -192,15 +231,15 @@ func (mock *MockQuerier) Close() error {
 	return nil
 }
 
-func (mock *MockQuerier) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mock *MockQuerier) LabelValues(_ context.Context, _ string, _ *storage.LabelHints, _ ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	return nil, nil, nil
 }
 
-func (mock *MockQuerier) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
+func (mock *MockQuerier) LabelNames(_ context.Context, _ *storage.LabelHints, _ ...*labels.Matcher) ([]string, annotations.Annotations, error) {
 	return nil, nil, nil
 }
 
-func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
+func TestIntegrationSendsExpectedHintsAndLabelMatchers(t *testing.T) {
 
 	logger := graviolalog.NewLogger(conf.LogConf)
 	ctx := context.Background()
@@ -216,38 +255,42 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 			mockQuerier,
 		}
 
-		gravStorage := storageproxy.NewGraviolaStorage(logger, groups)
-		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
+		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
+		sut := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
-		currentTime := time.Now()
-
-		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
-		assert.NoError(t, err, "should return no error")
+		querier, err := sut.NewInstantQuery(
+			ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
+		require.NoError(t, err, "should return no error")
 
 		querier.Exec(ctx)
 
 		queriesMatchersReceived := make([][]labels.Matcher, 0)
 
 		for _, selectEntry := range mockQuerier.selectCalledWith {
-			assert.Equal(t, false, selectEntry.sortSeries, "should be equal")
+			assert.False(t, selectEntry.sortSeries, "should not tell series should be sorted")
 
-			if tc.hintsFunc != nil {
-				localHints := tc.hintsFunc()
-				assert.Equal(t, localHints.Step, selectEntry.hints.Step, "hints step should be equal")
-				assert.InDelta(t, localHints.End, selectEntry.hints.End, 100.0, "hints end should be equal (inside a delta)")
-				assert.InDelta(t, localHints.Start, selectEntry.hints.Start, 100.0, "hints start should be equal (inside a delta)")
+			if tc.expectedHintsInstantQueryFunc != nil {
+				expectedHints := tc.expectedHintsInstantQueryFunc()
+				assert.Equal(t, expectedHints.Step, selectEntry.hints.Step, "hints step should be equal")
+				assert.Equal(t, expectedHints.End, selectEntry.hints.End, "hints end should be equal")
+				assert.Equal(t, expectedHints.Start, selectEntry.hints.Start, "hints start should be equal")
 
 			} else {
-				assert.Equal(t, int64(0), selectEntry.hints.Step, "hints step should be equal")
+				assert.Equal(t, int64(0), selectEntry.hints.Step, "hints step should be zero")
 				assert.Equal(t, currentTime.UnixMilli(), selectEntry.hints.End, "hints end should be equal")
-				assert.Equal(t, currentTime.Add(-5*time.Minute).UnixMilli(), selectEntry.hints.Start, "hints start should be equal")
+				//I don't know why Prometheus adds this extra millisecond. Just add it here to make sure
+				// we keep the consistency.
+				assert.Equal(t, currentTime.Add(-5*time.Minute).Add(time.Millisecond).UnixMilli(),
+					selectEntry.hints.Start, "hints start should be equal")
 			}
 
 			queriesMatchersReceived = append(queriesMatchersReceived, derefMatchers(selectEntry.matchers))
 		}
 
-		assert.Equalf(t, len(tc.labelMatchers), len(queriesMatchersReceived), "should have performed %d queries", len(tc.labelMatchers))
-		assert.Equalf(t, tc.labelMatchers, queriesMatchersReceived, "should have performed the correct queries")
+		assert.Equalf(t, len(tc.expectedLabelMatchers), len(queriesMatchersReceived),
+			"should have performed %d queries", len(tc.expectedLabelMatchers))
+		assert.Equalf(t, tc.expectedLabelMatchers, queriesMatchersReceived,
+			"should have performed the correct queries")
 	}
 
 	for _, tc := range queryTestCases {
@@ -266,23 +309,21 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 			mockQuerier,
 		}
 
-		gravStorage := storageproxy.NewGraviolaStorage(logger, groups)
-		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
+		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
+		sut := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
-		currentTime := time.Now()
-		startTime := currentTime.Add(-2 * time.Hour)
+		startTime := currentTime.Add(-rangeQueryLookback)
 		endTime := currentTime
-		step := time.Duration(time.Minute)
-		if tc.hintsFunc != nil {
-			step = time.Duration(tc.hintsFunc().Step)
+		step := time.Minute
+		if tc.expectedHintsRangeQueryFunc != nil {
+			step = time.Duration(tc.expectedHintsRangeQueryFunc().Step)
 		}
 
-		querier, err := eng.NewRangeQuery(
+		querier, err := sut.NewRangeQuery(
 			ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query,
 			startTime, endTime, step,
 		)
 		if err != nil {
-			fmt.Println("On query: " + tc.query)
 			panic(err)
 		}
 
@@ -291,25 +332,26 @@ func TestIntegrationCallsPassingTheProvidedParameters(t *testing.T) {
 		queriesMatchersReceived := make([][]labels.Matcher, 0)
 
 		for _, selectEntry := range mockQuerier.selectCalledWith {
-			assert.Equal(t, false, selectEntry.sortSeries, "should be equal")
+			assert.False(t, selectEntry.sortSeries, "should be equal")
 
-			if tc.hintsFunc != nil {
-				localHints := tc.hintsFunc()
-				assert.Equal(t, localHints.Step, selectEntry.hints.Step, "hints step should be equal")
-				assert.InDelta(t, localHints.End, selectEntry.hints.End, 100.0, "hints end should be equal (inside a delta)")
-				assert.InDelta(t, localHints.Start, selectEntry.hints.Start, 100.0, "hints start should be equal (inside a delta)")
-
+			if tc.expectedHintsRangeQueryFunc != nil {
+				expectedHints := tc.expectedHintsRangeQueryFunc()
+				assert.Equal(t, expectedHints.Step, selectEntry.hints.Step, "hints step should be equal")
+				assert.Equal(t, expectedHints.End, selectEntry.hints.End,
+					"hints end should be equal")
+				assert.Equal(t, expectedHints.Start, selectEntry.hints.Start,
+					"hints start should be equal")
 			} else {
 				assert.Equal(t, int64(60000), selectEntry.hints.Step, "hints step should be equal")
 				assert.Equal(t, endTime.UnixMilli(), selectEntry.hints.End, "hints end should be equal")
-				assert.Equal(t, startTime.Add(-5*time.Minute).UnixMilli(), selectEntry.hints.Start, "hints start should be equal")
+				assert.Equal(t, startTime.Add(-5*time.Minute).Add(time.Millisecond).UnixMilli(), selectEntry.hints.Start, "hints start should be equal")
 			}
 
 			queriesMatchersReceived = append(queriesMatchersReceived, derefMatchers(selectEntry.matchers))
 		}
 
-		assert.Equalf(t, len(tc.labelMatchers), len(queriesMatchersReceived), "should have performed %d queries", len(tc.labelMatchers))
-		assert.Equalf(t, tc.labelMatchers, queriesMatchersReceived, "should have performed the correct queries")
+		assert.Equalf(t, len(tc.expectedLabelMatchers), len(queriesMatchersReceived), "should have performed %d queries", len(tc.expectedLabelMatchers))
+		assert.Equalf(t, tc.expectedLabelMatchers, queriesMatchersReceived, "should have performed the correct queries")
 	}
 }
 
@@ -317,8 +359,6 @@ func TestIntegrationHandlesCorrectlyTheReturnedSeriesSetOnInstantQuery(t *testin
 
 	logger := graviolalog.NewLogger(conf.LogConf)
 	ctx := context.Background()
-
-	currentTime := time.Now()
 
 	defaultSeries := []*domain.GraviolaSeries{
 		{
@@ -403,11 +443,11 @@ func TestIntegrationHandlesCorrectlyTheReturnedSeriesSetOnInstantQuery(t *testin
 			mockQuerier,
 		}
 
-		gravStorage := storageproxy.NewGraviolaStorage(logger, groups)
+		gravStorage := storageproxy.NewGraviolaStorage(logger, groups, defaultMergeStrategy)
 		eng := queryengine.NewGraviolaQueryEngine(logger, reg, conf)
 
 		querier, err := eng.NewInstantQuery(ctx, gravStorage, promql.NewPrometheusQueryOpts(false, 0), tc.query, currentTime)
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 
 		result := querier.Exec(ctx)
 
@@ -423,6 +463,3 @@ func derefMatchers(matchers []*labels.Matcher) []labels.Matcher {
 	}
 	return derefed
 }
-
-//TODO:
-// Test @ symbol usage

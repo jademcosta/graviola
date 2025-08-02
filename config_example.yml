@@ -1,88 +1,110 @@
 api:
   port: 8091
-  # [optional] default is 1 minute (1m). Defines after how much time the query is aborted and
-  # an error is returned.
-  timeout: 1m
 
 # Configs about queries
 querying:
   # [optional] Configures how many samples at max can be held in memory on a single query.
-  # Default value is 10000.
+  # A sample is a datapoint from a timeseries
+  # Default value is 100000.
   max_samples: 2048
-  # [optional] Configures how old a datapoint has to be before considered stale. It has to be a
+  # [optional] Configures how old a datapoint has to be before considered stale. Value must be a
   # "duration format", like 5m (5 minutes), 30s (30 seconds). Using too little value here will
   # put pressure on the remote storages, as any delay in ingestion will make the metric be
-  # considered stale (and as consequence the instance query would return empty).
+  # considered stale (and as consequence the instant query would return empty).
+  # This affects mainly instant queries, as range queries already fetch several datapoints
   # To undersstand it deeper, read Prometheus definition:
   # https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness
   # The bigger this number, the more probable that more data is going to be fetched from remotes
   # on each query. Default 5m.
   lookback_delta: 9m
-  # [optional] Set the maximum simultaneous queries running. This means that if query 21
-  # arrives, it will be denied. So, size the machine running Graviola to be able to
-  # handle the load. Default is 20.
+  # [optional] Set the maximum simultaneous queries running. If you set this to 20, when a new
+  # query arrives (21th query )it will be denied. So, size the machine running Graviola to be able to
+  # handle the load from the value set here. Default is 20.
   max_concurrent_queries: 30
+  # [optional] Defines after how much time the query is aborted and an error is returned.
+  # default is 1 minute (1m).
+  timeout: 1m
 
 # [optional] Controls the log level. Allowed values: debug, info, warn, error. Default value is "info"
 log:
   level: info
 
+# [mandatory] Places where to fetch data. A remote is a "system" where Graviola can query for metrics.
+# Remotes can be organized in groups, to make it easy to share configurations.
+# This means that you have 3 levels of configs:
+# First is this one (storages). Every config set at this level will be sent to groups and remotes.
+# Then you have groups, where all remotes inside it share the same config, and any config set on
+# storage level and on groups level will be overriden by the one set at group level.
+# Last, you have remotes. Any config set on remote will override configs set on group.
+# Please note that some configs only exist at storage level, group level or remote level.
 storages:
   # [optional] default is type 'keep_biggest'. This configures how Graviola will merge the
   # data from multiple groups.
   # Possible values are:
-  # * keep_biggest - When 2 time-series have the same label set, it will keep the one that has the
-  # biggest number of datapoints in the response. If 2 or more time-series have the same count, it
-  # will pick one at random
+  # * keep_biggest - When 2 time-series from different remotes are excatly the same (but with
+  # different values), the one with the biggest number of datapoints in the response will be
+  # the one kept. If 2 or more time-series have the same count of datapoints, it will pick one at
+  # random.
   # * always_merge - Will merge all the data into 1 single time-series (for time series that
   # share the same label set). In case the result has 2 datapoints with the exact same timestamp,
-  # it will pick on at random.
+  # it will pick on at random. This means that if you have 2 time-series with the same label-set,
+  # each one with 20 datapoints, and no datapoint has the same timestamp, they will be merged to
+  # form a single time-series with 40 datapoints.
   merge_strategy:
     type: keep_biggest
   # [mandatory] The groups of remote servers. You can define a single group if you want. Groups
-  # are used to share configurations, and all the data inside them will be merged
+  # are used to share configurations, and all the data inside them will be "simply" merged. This
+  # means that if 2 remotes have 2 time-series with the same label-set, the time-series will be
+  # merged into a single time-series, and all datapoints will be kept.
   # (the deduplication happens on the level above this one).
   groups:
-    # [mandatory] The name of the group. (two different groups cannot have the same name)
-    - name: "some group name"
+    # [mandatory] The name of the group. Two different groups cannot have the same name.
+    - name: "some group name 1"
       # [optional] default: fail_all
       # What will happen if a single server fails to answer the query. A failure means an error.
       # An empty response is NOT a failure, as no error has happened.
       # The options are:
       # * fail_all - fail the whole query on this group
       # * partial_response - answer the query with the server that returned data, which might
-      # end up being a partial response
+      # end up being a partial response.
       on_query_fail: fail_all
       # [optional] In case you don't want to define a per instance time window, this is where a
       # time window for all servers in this group is defined. If time_windows are re-defined on
       # a per server basis, it will override these values from this config.
-      # Graviola will avoid querying it if the query is outide its time window.
-      # If this is not set, graviola will send all the queries to servers in this group
+      # Graviola will avoid querying it if the query is outide the time window of the group.
+      # If this is not set, graviola will not filter the queries based on the time window
       time_window:
-        # Times 3 formats. relative (now-4d), Unix (1136239445) and
-        # RFC3339 (1996-12-19T16:39:57-08:00) ( one more example as this case is difficult:
+        # Accepts 3 formats: relative (now-4d), Unix (1136239445) and
+        # RFC3339 (1996-12-19T16:39:57-08:00) (one more example as this case is difficult:
         # 1985-04-12T23:20:50.52Z) (but do a favor to yourself and don't use timezones here)
         # The time defined here will be parsed following the order they were mentioned above:
-        # relative, unix and RFC3339
+        # relative, unix and RFC3339. If you set the value from the example below, you are telling
+        # that this group has only 6 hours of time window (metrics on the remotes are all inside
+        # this time window)
         start: "now-6h"
         end: "now"
+      # [mandatory] The list of remote storages that belongs to this group
       remotes:
         # [mandatory] the name of this remote. Within a group, 2 different remotes cannot have
         # the same name
         - name: "my server 1"
           # [mandatory] The address of the remote server
           address: "https://localhost:9090"
-          # [optional] in case the remote server has a prefix for the querying path, which is /api/v1/query
+          # [optional] in case the remote server has a prefix for the querying path,
+          # which is /api/v1/query . This means that if you set this as `/abc`, the querying path
+          # will be `/abc/api/v1/query`
           path_prefix: ""
           # [optional] if this server has a fixed retention window, by setting data under this map
           # Graviola will avoid querying it if the query is outide its time window
           # If this is not set, graviola will send all the queries to this server.
           # If a time_window is set on the parent group, this config will override it.
           time_window:
-            # Accepts 3 time formats. relative (now-4d), Unix (1136239445) and
-            # RFC3339 (1996-12-19T16:39:57-08:00) ( one more example as this case is difficult:
+            # Accepts 3 formats: relative (now-4d), Unix (1136239445) and
+            # RFC3339 (1996-12-19T16:39:57-08:00) (one more example as this case is difficult:
             # 1985-04-12T23:20:50.52Z) (but do a favor to yourself and don't use timezones here)
             # The time defined here will be parsed following the order they were mentioned above:
-            # relative, unix and RFC3339
+            # relative, unix and RFC3339. If you set the value from the example below, you are telling
+            # that this remote has only 6 hours of time window (metrics on it are all inside
+            # this time window)
             start: "now-6h"
             end: "now"

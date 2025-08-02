@@ -36,12 +36,16 @@ type RemoteStorage struct {
 	now    func() time.Time
 }
 
-func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() time.Time) *RemoteStorage {
+func NewRemoteStorage(
+	logg *slog.Logger, conf config.RemoteConfig, now func() time.Time, timeout time.Duration,
+) *RemoteStorage {
 	return &RemoteStorage{
-		logg:   logg.With("name", conf.Name, "component", "remote"),
-		URLs:   generateURLs(conf, logg),
-		client: &http.Client{}, //TODO: allow to config this
-		now:    now,
+		logg: logg.With("name", conf.Name, "component", "remote"),
+		URLs: generateURLs(conf),
+		client: &http.Client{
+			Timeout: timeout,
+		},
+		now: now,
 	}
 }
 
@@ -49,7 +53,8 @@ func NewRemoteStorage(logg *slog.Logger, conf config.RemoteConfig, now func() ti
 //
 // Select returns a set of series that matches the given label matchers.
 // Caller can specify if it requires returned series to be sorted. Prefer not requiring sorting for better performance.
-// It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
+// It allows passing hints that can help in optimising select, but it's up to the (remote)
+// implementation how this is used, if used at all.
 func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
 	promQLQuery, err := ToPromQLQuery(matchers)
 	if err != nil {
@@ -119,8 +124,8 @@ func (rStorage *RemoteStorage) Select(ctx context.Context, sortSeries bool, hint
 	}
 
 	responseTSData := rStorage.parseTimeSeriesData(reencodedData, sortSeries)
-	if err != nil {
-		e := fmt.Errorf("unable to parse time-series data: %w", err)
+	if responseTSData.Erro != nil {
+		e := fmt.Errorf("unable to parse time-series data: %w", responseTSData.Erro)
 		rStorage.logg.Error("parsing time-series data", "error", e)
 		return &domain.GraviolaSeriesSet{
 			Erro:   e,
@@ -153,6 +158,7 @@ func (rStorage *RemoteStorage) Close() error {
 func (rStorage *RemoteStorage) LabelValues(
 	ctx context.Context,
 	name string,
+	_ *storage.LabelHints, //TODO: use hints
 	matchers ...*labels.Matcher,
 ) ([]string, annotations.Annotations, error) {
 
@@ -205,6 +211,7 @@ func (rStorage *RemoteStorage) LabelValues(
 //	// to label names of metrics matching the matchers.
 func (rStorage *RemoteStorage) LabelNames(
 	ctx context.Context,
+	_ *storage.LabelHints, //TODO: use hints
 	matchers ...*labels.Matcher,
 ) ([]string, annotations.Annotations, error) {
 
@@ -399,7 +406,7 @@ func (rStorage *RemoteStorage) parseTimeSeriesData(data []byte, sorted bool) *do
 	}
 }
 
-func generateURLs(conf config.RemoteConfig, logg *slog.Logger) map[string]string {
+func generateURLs(conf config.RemoteConfig) map[string]string {
 	result := make(map[string]string)
 
 	base := conf.Address

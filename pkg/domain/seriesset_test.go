@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWarnings(t *testing.T) {
@@ -91,7 +92,7 @@ func TestAtAndNextAreConnectedAndKeepTheProvidedOrder(t *testing.T) {
 
 func TestReturnsErrorIfItNotNil(t *testing.T) {
 	sut := &domain.GraviolaSeriesSet{}
-	assert.Nil(t, sut.Err(), "should return nil when no error is set")
+	require.NoError(t, sut.Err(), "should return nil when no error is set")
 
 	sut = &domain.GraviolaSeriesSet{Erro: context.DeadlineExceeded}
 	assert.Equal(t, context.DeadlineExceeded, sut.Err(), "should return the error when it is set")

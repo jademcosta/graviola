@@ -55,15 +55,21 @@ func (qO11y *QuerierO11y) Close() error {
 }
 
 // LabelQuerier
-func (qO11y *QuerierO11y) LabelValues(ctx context.Context, name string,
-	matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	return qO11y.wrapped.LabelValues(ctx, name, matchers...)
+func (qO11y *QuerierO11y) LabelValues(
+	ctx context.Context, name string,
+	hints *storage.LabelHints,
+	matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
+	return qO11y.wrapped.LabelValues(ctx, name, hints, matchers...)
 }
 
 // LabelQuerier
-func (qO11y *QuerierO11y) LabelNames(ctx context.Context,
-	matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	return qO11y.wrapped.LabelNames(ctx, matchers...)
+func (qO11y *QuerierO11y) LabelNames(
+	ctx context.Context,
+	hints *storage.LabelHints,
+	matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
+	return qO11y.wrapped.LabelNames(ctx, hints, matchers...)
 }
 
 func registerMetrics(metricz *prometheus.Registry) {

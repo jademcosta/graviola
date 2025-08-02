@@ -27,7 +27,7 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 	mockRemote := MockRemote{
 		mux: http.NewServeMux(),
 	}
-	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
+	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(*response))
 		if err != nil {
 			panic(err)
@@ -144,12 +144,18 @@ func TestParsesVectorResponseCorrectlyWithOrderedLabelsAndSeries(t *testing.T) {
 		},
 	}
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	for _, tc := range testCases {
 		response = &tc.answer
 		result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
-		assert.Lenf(t, result.(*domain.GraviolaSeriesSet).Series, tc.seriesCount, "should have %d series", tc.seriesCount)
+		assert.Lenf(t, result.(*domain.GraviolaSeriesSet).Series, tc.seriesCount, //nolint: forcetypeassert
+			"should have %d series", tc.seriesCount)
 		assert.Equal(t, tc.expectedResult, result, "result should be correct")
 	}
 }
@@ -164,7 +170,7 @@ func TestParsesVectorResponseCorrectlyWithNaN(t *testing.T) {
 	mockRemote := MockRemote{
 		mux: http.NewServeMux(),
 	}
-	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, r *http.Request) {
+	mockRemote.mux.HandleFunc(remotestorage.DefaultInstantQueryPath, func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write([]byte(response))
 		if err != nil {
 			panic(err)
@@ -174,14 +180,19 @@ func TestParsesVectorResponseCorrectlyWithNaN(t *testing.T) {
 	remoteSrv := httptest.NewServer(mockRemote.mux)
 	defer remoteSrv.Close()
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
 
 	result := sut.Select(context.Background(), true, &defaultHints, defaultMatchers...)
-	resultParsed := result.(*domain.GraviolaSeriesSet)
+	resultParsed := result.(*domain.GraviolaSeriesSet) //nolint: forcetypeassert
 
 	assert.Lenf(t, resultParsed.Series, 1, "should have 1 serie")
 
-	assert.Len(t, resultParsed.Series[0].Lbs, 0, "should have no labels")
+	assert.Empty(t, resultParsed.Series[0].Lbs, "should have no labels")
 
 	assert.Equal(t, model.Time(17024837986), resultParsed.Series[0].Datapoints[0].Timestamp, "timestamp should have been parsed")
 	assert.True(t, math.IsNaN(float64(resultParsed.Series[0].Datapoints[0].Value)), "NaN value should have been parsed")

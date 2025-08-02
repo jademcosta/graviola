@@ -9,6 +9,8 @@ import (
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
 )
 
+// The representation of a time-series, with its labels and datapoints
+// Implements the Prometheus Series interface.
 type GraviolaSeries struct {
 	Lbs        labels.Labels
 	Datapoints []model.SamplePair
@@ -61,6 +63,8 @@ func (gravIter *GraviolaIterator) Next() chunkenc.ValueType {
 // has no effect. If a sample has been found, Seek returns the type of
 // its value. Otherwise, it returns ValNone, after which the iterator is
 // exhausted.
+//
+//nolint:stdmethods
 func (gravIter *GraviolaIterator) Seek(t int64) chunkenc.ValueType {
 	if gravIter.cur == -1 {
 		gravIter.cur = 0

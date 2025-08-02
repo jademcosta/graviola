@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/jademcosta/graviola/pkg/config"
@@ -29,9 +28,9 @@ func TestAcceptSpecificMergeStrategiesNames(t *testing.T) {
 		err := sut.IsValid()
 
 		if tc.shouldError {
-			assert.Error(t, err, fmt.Sprintf("type value %s should result in error when calling Validate", tc.value))
+			assert.Error(t, err, "type value %s should result in error when calling Validate", tc.value)
 		} else {
-			assert.NoError(t, err, fmt.Sprintf("type value %s should NOT result in error when calling Validate", tc.value))
+			assert.NoError(t, err, "type value %s should NOT result in error when calling Validate", tc.value)
 		}
 	}
 }
@@ -41,5 +40,5 @@ func TestMergeStrategyDefaultValues(t *testing.T) {
 	newSut := sut.FillDefaults()
 
 	assert.Equal(t, config.DefaultMergeStrategyType, newSut.Strategy,
-		fmt.Sprintf("merge strategy type should be set to %s if the provided value is empty", config.DefaultMergeStrategyType))
+		"merge strategy type should be set to %s if the provided value is empty", config.DefaultMergeStrategyType)
 }

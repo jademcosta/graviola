@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const labelValuesResponse = `{"status":"success","data":[{{VALUES}}]}`
@@ -37,7 +38,7 @@ func TestCorrectlyParsesLabelValuesSuccessResponse(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			var content string
 			if len(tc.labels) > 0 {
@@ -54,10 +55,15 @@ func TestCorrectlyParsesLabelValuesSuccessResponse(t *testing.T) {
 
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
-		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		result, annotations, err := sut.LabelValues(context.Background(), "any-name")
-		assert.NoError(t, err, "should have returned no error")
-		assert.Len(t, annotations.AsErrors(), 0, "should have no annotations")
+		sut := remotestorage.NewRemoteStorage(
+			logg,
+			config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+			func() time.Time { return frozenTime },
+			dummyTimeout,
+		)
+		result, annotations, err := sut.LabelValues(context.Background(), "any-name", nil)
+		require.NoError(t, err, "should have returned no error")
+		assert.Empty(t, annotations.AsErrors(), "should have no annotations")
 
 		assert.Len(t, result, len(tc.labels), "should have returned all the label names")
 		assert.ElementsMatch(t, tc.labels, result, "elements should match")
@@ -84,7 +90,7 @@ func TestLabelValuesKnowsHowToDealWithRemoteErrors(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(tc.responseStatus)
 			_, err := w.Write([]byte(tc.response))
 			panicOnError(err)
@@ -92,9 +98,14 @@ func TestLabelValuesKnowsHowToDealWithRemoteErrors(t *testing.T) {
 
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
-		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		_, _, err := sut.LabelNames(context.Background())
-		assert.Errorf(t, err, "should have returned no error when status is %d and response %s",
+		sut := remotestorage.NewRemoteStorage(
+			logg,
+			config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+			func() time.Time { return frozenTime },
+			dummyTimeout,
+		)
+		_, _, err := sut.LabelNames(context.Background(), nil)
+		require.Errorf(t, err, "should have returned no error when status is %d and response %s",
 			tc.responseStatus, tc.response)
 
 		remoteSrv.Close()
@@ -126,12 +137,17 @@ func TestLabelValuesParametersAreSentToRemote(t *testing.T) {
 		{Type: labels.MatchNotEqual, Name: "my_label", Value: "another value"},
 	}
 
-	sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-	_, _, err := sut.LabelValues(context.Background(), "some-random-name", matchers...)
-	assert.NoError(t, err, "should return no error")
+	sut := remotestorage.NewRemoteStorage(
+		logg,
+		config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+		func() time.Time { return frozenTime },
+		dummyTimeout,
+	)
+	_, _, err := sut.LabelValues(context.Background(), "some-random-name", nil, matchers...)
+	require.NoError(t, err, "should return no error")
 
 	paramsResult, err := url.QueryUnescape(calledWithParams)
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.Equal(t, generateQueryParams(matchers), paramsResult, "query params should match")
 	assert.Equal(t, "some-random-name", calledWithLabelName, "query params should match")
 }
@@ -163,7 +179,7 @@ func TestLabelValuesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 			mux: http.NewServeMux(),
 		}
 
-		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mockRemote.mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte(tc.response))
 			panicOnError(err)
@@ -171,9 +187,14 @@ func TestLabelValuesWarningsAreTurnedIntoAnnotations(t *testing.T) {
 
 		remoteSrv := httptest.NewServer(mockRemote.mux)
 
-		sut := remotestorage.NewRemoteStorage(logg, config.RemoteConfig{Name: "test", Address: remoteSrv.URL}, func() time.Time { return frozenTime })
-		_, annots, err := sut.LabelValues(context.Background(), "any-name")
-		assert.NoError(t, err, "should have returned NO error")
+		sut := remotestorage.NewRemoteStorage(
+			logg,
+			config.RemoteConfig{Name: "test", Address: remoteSrv.URL},
+			func() time.Time { return frozenTime },
+			dummyTimeout,
+		)
+		_, annots, err := sut.LabelValues(context.Background(), "any-name", nil)
+		require.NoError(t, err, "should have returned NO error")
 		assert.Equal(
 			t,
 			tc.expected,

@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/util/annotations"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTheMergeMethod(t *testing.T) {
@@ -237,7 +238,7 @@ func TestTheMergeMethod(t *testing.T) {
 		assert.Len(t, parsedSet.Annots, 2, "should keep all annotations")
 		assert.Contains(t, parsedSet.Warnings(), err1.Error(), "should contain the annotation")
 		assert.Contains(t, parsedSet.Warnings(), err2.Error(), "should contain the annotation")
-		assert.Len(t, parsedSet.Series, 0, "should not create any series out of nothing")
+		assert.Empty(t, parsedSet.Series, "should not create any series out of nothing")
 		assert.NoError(t, resp.Err(), "should return no error")
 	})
 
@@ -260,16 +261,16 @@ func TestTheMergeMethod(t *testing.T) {
 		sut := mergestrategy.NewKeepBiggestMergeStrategy()
 
 		resp := sut.Merge(cast(seriesSet))
-		assert.Error(t, resp.Err(), "should return an error")
+		require.Error(t, resp.Err(), "should return an error")
 
 		parsedSet, ok := resp.(*domain.GraviolaSeriesSet)
 		assert.True(t, ok, "parsing should work")
 
-		assert.Len(t, parsedSet.Annots, 0, "should not be responsible for turning errors into annotations")
-		assert.Len(t, resp.Warnings(), 0, "should not be responsible for turning errors into annotations")
+		assert.Empty(t, parsedSet.Annots, "should not be responsible for turning errors into annotations")
+		assert.Empty(t, resp.Warnings(), "should not be responsible for turning errors into annotations")
 
 		assert.Len(t, parsedSet.Series, 1, "should keep the returned series")
-		assert.ErrorIs(t, resp.Err(), err1, "should have joined the returned errors")
+		require.ErrorIs(t, resp.Err(), err1, "should have joined the returned errors")
 		assert.ErrorIs(t, resp.Err(), err2, "should have joined the returned errors")
 	})
 }

@@ -2,7 +2,6 @@ package storageproxy_test
 
 import (
 	"context"
-	"log/slog"
 	"math/rand"
 	"reflect"
 	"slices"
@@ -13,17 +12,22 @@ import (
 	"github.com/jademcosta/graviola/pkg/config"
 	"github.com/jademcosta/graviola/pkg/domain"
 	"github.com/jademcosta/graviola/pkg/graviolalog"
+	"github.com/jademcosta/graviola/pkg/remotestoragegroup"
 	"github.com/jademcosta/graviola/pkg/storageproxy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
+const anyMinTime = int64(0)
+const anyMaxTime = int64(1)
+
+var logg = graviolalog.NewLogger(config.LogConfig{Level: "error"})
+var defaultMergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyType)
 
 func TestSelect(t *testing.T) {
-
 	mockStorage1 := &mocks.RemoteStorageMock{
 		SeriesSet: &domain.GraviolaSeriesSet{
 			Series: []*domain.GraviolaSeries{
@@ -41,10 +45,10 @@ func TestSelect(t *testing.T) {
 		},
 	}
 
-	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
-	querier, err := sut.Querier(0, 6000)
-	assert.NoError(t, err, "should not return error")
+	querier, err := sut.Querier(anyMinTime, anyMaxTime)
+	require.NoError(t, err, "should return no error")
 
 	ctx := context.Background()
 	sorted := true
@@ -60,7 +64,7 @@ func TestSelect(t *testing.T) {
 
 	mergedSeries := querier.Select(ctx, sorted, hints, matchers...)
 	graviolaSeriesSet, ok := mergedSeries.(*domain.GraviolaSeriesSet)
-	assert.True(t, ok, "should be a GraviolaSeriesSet")
+	require.True(t, ok, "should be a GraviolaSeriesSet")
 
 	assert.Len(t, graviolaSeriesSet.Series, 2, "should have all the remote storage series")
 
@@ -104,10 +108,10 @@ func TestConcurrentSelects(t *testing.T) {
 		},
 	}
 
-	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
-	querier, err := sut.Querier(0, 6000)
-	assert.NoError(t, err, "should not return error")
+	querier, err := sut.Querier(anyMinTime, anyMaxTime)
+	require.NoError(t, err, "should return no error")
 
 	ctx := context.Background()
 	sorted := true
@@ -142,7 +146,7 @@ func TestConcurrentSelects(t *testing.T) {
 		counterOfResults++
 
 		graviolaSeriesSet, ok := res.(*domain.GraviolaSeriesSet)
-		assert.True(t, ok, "should be a GraviolaSeriesSet")
+		require.True(t, ok, "should be a GraviolaSeriesSet")
 		assert.Len(t, graviolaSeriesSet.Series, 2, "should have all the remote storage series")
 
 		for _, serie := range graviolaSeriesSet.Series {
@@ -165,7 +169,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	valuesGenerated := make([]float64, 0)
 
 	mockStorage1 := &mocks.RemoteStorageMock{
-		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
+		SelectFn: func(_ context.Context, _ bool, _ *storage.SelectHints, _ ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int() //TODO: extract this logic to a function
 			for {
@@ -173,7 +177,6 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 					break
 				}
 				time = rand.Int()
-
 			}
 
 			value := rand.Float64()
@@ -196,7 +199,7 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 	}
 
 	mockStorage2 := &mocks.RemoteStorageMock{
-		SelectFn: func(ctx context.Context, b bool, sh *storage.SelectHints, m ...*labels.Matcher) storage.SeriesSet {
+		SelectFn: func(_ context.Context, _ bool, _ *storage.SelectHints, _ ...*labels.Matcher) storage.SeriesSet {
 
 			time := rand.Int()
 			for {
@@ -226,10 +229,10 @@ func TestConcurrentSelectsWithDifferentAnswers(t *testing.T) {
 		},
 	}
 
-	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2})
+	sut := storageproxy.NewGraviolaStorage(logg, []storage.Querier{mockStorage1, mockStorage2}, defaultMergeStrategy)
 
 	querier, err := sut.Querier(0, 6000)
-	assert.NoError(t, err, "should not return error")
+	require.NoError(t, err, "should not return error")
 
 	ctx := context.Background()
 	sorted := true

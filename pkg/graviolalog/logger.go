@@ -1,7 +1,6 @@
 package graviolalog
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -18,28 +17,8 @@ func NewLogger(conf config.LogConfig) *slog.Logger {
 	return slog.New(logHandler)
 }
 
-type graviolaLogger struct {
-	logg *slog.Logger
-}
-
-func AdaptToGoKitLogger(logg *slog.Logger) *graviolaLogger {
-	return &graviolaLogger{
-		logg: logg,
-	}
-}
-
-func (gravLogger *graviolaLogger) Log(args ...interface{}) error {
-	if len(args) == 0 {
-		return nil
-	}
-
-	if len(args) == 1 {
-		gravLogger.logg.Info(fmt.Sprintf("%v", args[0]))
-		return nil
-	}
-
-	gravLogger.logg.Info(fmt.Sprintf("%v", args[0]), args[1:]...)
-	return nil
+func NewNoopLogger() *slog.Logger {
+	return slog.New(&noopHandler{})
 }
 
 func parseLevel(lvl string) slog.Level {

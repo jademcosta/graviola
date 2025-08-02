@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/jademcosta/graviola/pkg/remotestoragegroup/mergestrategy"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/util/annotations"
@@ -15,7 +14,9 @@ type OnQueryFailureStrategy interface {
 	ForLabels([]string, error) ([]string, error)
 }
 
-type Group struct {
+// A group (array) of remote storage queriers. It should be possible to use it interchangeably
+// where a simpler Remote is used.
+type RemoteGroup struct {
 	Name              string
 	remoteStorages    []storage.Querier
 	remoteStoragesLen int
@@ -24,15 +25,15 @@ type Group struct {
 	seriesSetMerger   MergeStrategy
 }
 
-func NewGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier,
-	onQueryFailure OnQueryFailureStrategy) *Group {
+func NewRemoteGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier,
+	onQueryFailure OnQueryFailureStrategy, mergeStrategy MergeStrategy) *RemoteGroup {
 
-	return &Group{
+	return &RemoteGroup{
 		Name:              name,
 		remoteStorages:    remoteStorages,
 		remoteStoragesLen: len(remoteStorages),
 		logg:              logg.With("name", name, "component", "group"),
-		seriesSetMerger:   mergestrategy.NewKeepBiggestMergeStrategy(), //FIXME: create a factory that uses the config
+		seriesSetMerger:   mergeStrategy,
 		onQueryFailure:    onQueryFailure,
 	}
 }
@@ -41,17 +42,19 @@ func NewGroup(logg *slog.Logger, name string, remoteStorages []storage.Querier,
 // Select returns a set of series that matches the given label matchers.
 // Caller can specify if it requires returned series to be sorted. Prefer not requiring sorting for better performance.
 // It allows passing hints that can help in optimising select, but it's up to implementation how this is used if used at all.
-func (grp *Group) Select(ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher) storage.SeriesSet {
-	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
+func (rGroup *RemoteGroup) Select(
+	ctx context.Context, sortSeries bool, hints *storage.SelectHints, matchers ...*labels.Matcher,
+) storage.SeriesSet {
+	mergeQuerier := NewMergeQuerier(rGroup.remoteStorages, rGroup.seriesSetMerger)
 
 	response := mergeQuerier.Select(ctx, sortSeries, hints, matchers...)
-	return grp.onQueryFailure.ForSeriesSet(response)
+	return rGroup.onQueryFailure.ForSeriesSet(response)
 }
 
 // LabelQuerier
 // Close releases the resources of the Querier.
-func (grp *Group) Close() error {
-	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
+func (rGroup *RemoteGroup) Close() error {
+	mergeQuerier := NewMergeQuerier(rGroup.remoteStorages, rGroup.seriesSetMerger)
 
 	response := mergeQuerier.Close()
 	return response
@@ -62,11 +65,13 @@ func (grp *Group) Close() error {
 // It is not safe to use the strings beyond the lifetime of the querier.
 // If matchers are specified the returned result set is reduced
 // to label values of metrics matching the matchers.
-func (grp *Group) LabelValues(ctx context.Context, name string, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
+func (rGroup *RemoteGroup) LabelValues(
+	ctx context.Context, name string, hints *storage.LabelHints, matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
+	mergeQuerier := NewMergeQuerier(rGroup.remoteStorages, rGroup.seriesSetMerger)
 
-	vals, annots, err := mergeQuerier.LabelValues(ctx, name, matchers...)
-	vals, err = grp.onQueryFailure.ForLabels(vals, err)
+	vals, annots, err := mergeQuerier.LabelValues(ctx, name, hints, matchers...)
+	vals, err = rGroup.onQueryFailure.ForLabels(vals, err)
 	return vals, annots, err
 }
 
@@ -74,11 +79,13 @@ func (grp *Group) LabelValues(ctx context.Context, name string, matchers ...*lab
 // LabelNames returns all the unique label names present in the block in sorted order.
 // If matchers are specified the returned result set is reduced
 // to label names of metrics matching the matchers.
-func (grp *Group) LabelNames(ctx context.Context, matchers ...*labels.Matcher) ([]string, annotations.Annotations, error) {
-	mergeQuerier := NewMergeQuerier(grp.remoteStorages, grp.seriesSetMerger)
+func (rGroup *RemoteGroup) LabelNames(
+	ctx context.Context, hints *storage.LabelHints, matchers ...*labels.Matcher,
+) ([]string, annotations.Annotations, error) {
+	mergeQuerier := NewMergeQuerier(rGroup.remoteStorages, rGroup.seriesSetMerger)
 
-	vals, annots, err := mergeQuerier.LabelNames(ctx, matchers...)
-	vals, err = grp.onQueryFailure.ForLabels(vals, err)
+	vals, annots, err := mergeQuerier.LabelNames(ctx, hints, matchers...)
+	vals, err = rGroup.onQueryFailure.ForLabels(vals, err)
 
 	return vals, annots, err
 }
