@@ -55,3 +55,20 @@ jobs:
       run: sleep 2
     - name: Run tests
       run: make ci-test-e2e
+
+  config-example-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.23.6"
+        cache: true
+    - name: Start Graviola with config example
+      run: |
+        go run ./cmd/main.go --config ./config_example.yml &
+        sleep 1
+    - name: Make sure Graviola is working
+      run: |
+        curl http://localhost:8091/metrics --fail
