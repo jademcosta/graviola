@@ -210,7 +210,10 @@ func createPrometheusAPI(
 		metricRegistry, // registerer prometheus.Registerer
 		nil,            // statsRenderer StatsRenderer
 		remoteWriteEnabled,
-		nil, // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
-		otlpEnabled,
+		nil,   // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
+		false, //otlpEnabled
+		false, //otlpDeltaToCumulative
+		false, //otlpNativeDeltaIngestion
+		false, //ctZeroIngestionEnabled
 	)
 }
