@@ -67,8 +67,10 @@ jobs:
         cache: true
     - name: Start Graviola with config example
       run: |
-        go run ./cmd/main.go --config ./config_example.yml &
-        sleep 1
+        go build -o graviola ./cmd/main.go
+        chmod +x graviola
+        ./graviola --config ./config_example.yml &
+        sleep 5
     - name: Make sure Graviola is working
       run: |
         curl http://localhost:8091/metrics --fail
