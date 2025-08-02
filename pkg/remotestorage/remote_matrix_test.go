@@ -141,8 +141,8 @@ func TestParsesMatrixResponseCorrectlyWithNaNs(t *testing.T) {
 
 	resultParsed := result.(*domain.GraviolaSeriesSet)
 
-	assert.Equal(t, "handler", resultParsed.Series[0].Lbs[0].Name, "label name should have been parsed")
-	assert.Equal(t, "/", resultParsed.Series[0].Lbs[0].Value, "label value should have been parsed")
+	// assert.Equal(t, "handler", resultParsed.Series[0].Lbs[0].Name, "label name should have been parsed")
+	assert.Equal(t, "/", resultParsed.Series[0].Lbs.Get("handler"), "label value should have been parsed")
 
 	assert.Equal(t, model.Time(1701635640000), resultParsed.Series[0].Datapoints[0].Timestamp, "timestamp should have been parsed")
 	assert.True(t, math.IsNaN(float64(resultParsed.Series[0].Datapoints[0].Value)), "NaN value should have been parsed")

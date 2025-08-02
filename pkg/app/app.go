@@ -29,9 +29,6 @@ import (
 	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
 
-const remoteWriteEnabled = false
-const otlpEnabled = false
-
 type App struct {
 	api       *api.GraviolaAPI
 	logger    *slog.Logger
@@ -209,8 +206,11 @@ func createPrometheusAPI(
 		metricRegistry, // gatherer prometheus.Gatherer
 		metricRegistry, // registerer prometheus.Registerer
 		nil,            // statsRenderer StatsRenderer
-		remoteWriteEnabled,
-		nil, // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
-		otlpEnabled,
+		false,          //remoteWriteEnabled
+		nil,            // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
+		false,          //otlpEnabled
+		false,          //otlpDeltaToCumulative
+		false,          //otlpNativeDeltaIngestion
+		false,          //ctZeroIngestionEnabled
 	)
 }
