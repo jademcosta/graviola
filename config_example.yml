@@ -38,7 +38,7 @@ log:
 # Last, you have remotes. Any config set on remote will override configs set on group.
 # Please note that some configs only exist at storage level, group level or remote level.
 storages:
-  # [optional] default is type 'keep_biggest'. This configures how Graviola will merge the
+  # [optional] default is type 'always_merge'. This configures how Graviola will merge the
   # data from multiple groups.
   # Possible values are:
   # * keep_biggest - When 2 time-series from different remotes are excatly the same (but with
@@ -51,7 +51,7 @@ storages:
   # each one with 20 datapoints, and no datapoint has the same timestamp, they will be merged to
   # form a single time-series with 40 datapoints.
   merge_strategy:
-    type: keep_biggest
+    type: always_merge
   # [mandatory] The groups of remote servers. You can define a single group if you want. Groups
   # are used to share configurations, and all the data inside them will be "simply" merged. This
   # means that if 2 remotes have 2 time-series with the same label-set, the time-series will be

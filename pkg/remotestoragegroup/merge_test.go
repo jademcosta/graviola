@@ -2,7 +2,7 @@ package remotestoragegroup_test
 
 import (
 	"context"
-	"slices"
+	"reflect"
 	"testing"
 
 	"github.com/jademcosta/graviola/internal/mocks"
@@ -107,9 +107,9 @@ func TestCallsTheMergeStrategyWithReturnOfWrappedQueriers(t *testing.T) {
 
 	assert.Len(t, strategy.calledWith[0], 3, "should have called with the result of the Queries select")
 
-	assert.True(t, slices.Contains(strategy.calledWith[0], storage.SeriesSet(seriesSet1)), "should contain all SeriesSet returned")
-	assert.True(t, slices.Contains(strategy.calledWith[0], storage.SeriesSet(seriesSet2)), "should contain all SeriesSet returned")
-	assert.True(t, slices.Contains(strategy.calledWith[0], storage.SeriesSet(seriesSet3)), "should contain all SeriesSet returned")
+	assertSeriesSetsPresentIn(t, strategy.calledWith[0], seriesSet1)
+	assertSeriesSetsPresentIn(t, strategy.calledWith[0], seriesSet2)
+	assertSeriesSetsPresentIn(t, strategy.calledWith[0], seriesSet3)
 }
 
 func TestReturnsWhateverTheMergeStrategyReturns(t *testing.T) {
@@ -149,4 +149,40 @@ func TestWhenOnlyOneQuerierExistDoesNotCallMerge(t *testing.T) {
 	sut.Select(context.Background(), true, &storage.SelectHints{})
 
 	assert.Empty(t, mergeStrategy.calledWith, "should not call Merge() when only 1 querier exists")
+}
+
+// nolint: forcetypeassert
+func assertSeriesSetsPresentIn(t assert.TestingT, seriesSets []storage.SeriesSet, desiredSeriesSet *domain.GraviolaSeriesSet) {
+	for _, sSet := range seriesSets {
+		castSeriesSet := sSet.(*domain.GraviolaSeriesSet)
+		equalSeries := seriesMatch(castSeriesSet.Series, desiredSeriesSet.Series)
+
+		if equalSeries {
+			return
+		}
+	}
+
+	assert.Fail(t, "SeriesSet not found in the provided seriesSets", "Expected SeriesSet: %v, but not found in: %v", *desiredSeriesSet, seriesSets)
+}
+
+func seriesMatch(a []*domain.GraviolaSeries, b []*domain.GraviolaSeries) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for _, seriesA := range a {
+		found := false
+		for _, seriesB := range b {
+			if reflect.DeepEqual(seriesA.Lbs, seriesB.Lbs) && reflect.DeepEqual(seriesA.Datapoints, seriesB.Datapoints) {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return false
+		}
+	}
+
+	return true
 }

@@ -9,7 +9,7 @@ const (
 	MergeStrategyAlwaysMerge = "always_merge"
 	MergeStrategyKeepBiggest = "keep_biggest"
 )
-const DefaultMergeStrategyType = MergeStrategyKeepBiggest
+const DefaultMergeStrategyType = MergeStrategyAlwaysMerge
 
 type MergeStrategyConfig struct {
 	Strategy string `yaml:"type"`
