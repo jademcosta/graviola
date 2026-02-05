@@ -48,7 +48,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
-	apiV1 := createPrometheusAPI(eng, graviolaStorage, logger, metricRegistry)
+	apiV1 := createPrometheusAPI(eng, graviolaStorage, logger, metricRegistry, conf)
 
 	metricRegistry.MustRegister(
 		collectors.NewBuildInfoCollector(),
@@ -160,6 +160,7 @@ func createPrometheusAPI(
 	graviolaStorage *storageproxy.GraviolaStorage,
 	logger *slog.Logger,
 	metricRegistry *prometheus.Registry,
+	conf config.GraviolaConfig,
 ) *api_v1.API {
 
 	//TODO: avoid all nils in the functions below. To avoid `panic`s
@@ -203,14 +204,16 @@ func createPrometheusAPI(
 			return nil, func() {}, noNotificationStreamAnswer
 		}, // notificationsSub, to get SSE notifications, live
 
-		metricRegistry, // gatherer prometheus.Gatherer
-		metricRegistry, // registerer prometheus.Registerer
-		nil,            // statsRenderer StatsRenderer
-		false,          //remoteWriteEnabled
-		nil,            // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
-		false,          //otlpEnabled
-		false,          //otlpDeltaToCumulative
-		false,          //otlpNativeDeltaIngestion
-		false,          //ctZeroIngestionEnabled
+		metricRegistry,                         // gatherer prometheus.Gatherer
+		metricRegistry,                         // registerer prometheus.Registerer
+		nil,                                    // statsRenderer StatsRenderer
+		false,                                  //remoteWriteEnabled
+		nil,                                    // acceptRemoteWriteProtoMsgs []config.RemoteWriteProtoMsg,
+		false,                                  //otlpEnabled
+		false,                                  //otlpDeltaToCumulative
+		false,                                  //otlpNativeDeltaIngestion
+		false,                                  //ctZeroIngestionEnabled
+		conf.QueryConf.LookbackDeltaDuration(), // lookbackDelta
+		false,                                  // enableTypeAndUnitLabels
 	)
 }
