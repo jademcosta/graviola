@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var defaultMergeStrategy remotestoragegroup.MergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyType)
+var defaultMergeStrategy remotestoragegroup.MergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategy)
 
 func TestSampleLimit(t *testing.T) {
 	logger := graviolalog.NewLogger(conf.LogConf)

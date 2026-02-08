@@ -6,10 +6,14 @@ import (
 	"strings"
 )
 
+// FIXME: write a test to match the expected values of these consts with the ones in the factories,
+// to avoid typos
 // TODO append a prefix on these consts
-const StrategyFailAll = "fail_all"
-const StrategyPartialResponse = "partial_response"
-const DefaultOnFailStrategy = StrategyFailAll
+const (
+	FailStrategyFailAll         = "fail_all"
+	FailStrategyPartialResponse = "partial_response"
+	DefaultOnFailStrategy       = FailStrategyFailAll
+)
 
 type RemoteGroupsConfig struct {
 	Name                string           `yaml:"name"`
@@ -61,5 +65,5 @@ func (rgc RemoteGroupsConfig) ensureNonDuplicatedRemoteNames() error {
 }
 
 func listSupportedFailureStrategies() []string {
-	return []string{StrategyFailAll, StrategyPartialResponse}
+	return []string{FailStrategyFailAll, FailStrategyPartialResponse}
 }

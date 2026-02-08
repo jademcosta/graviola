@@ -235,6 +235,6 @@ func TestFillDefaultsCallsItOnChildren(t *testing.T) {
 	sut = sut.FillDefaults()
 	assert.Equal(t, config.DefaultPort, sut.APIConf.Port, "should have filled API defaults")
 	assert.Equal(t, config.DefaultLogLevel, sut.LogConf.Level, "should have filled Log defaults")
-	assert.Equal(t, config.DefaultMergeStrategyType, sut.StoragesConf.MergeConf.Strategy, "should have filled storage defaults")
+	assert.Equal(t, config.DefaultMergeStrategy, sut.StoragesConf.MergeConf.Strategy, "should have filled storage defaults")
 	assert.Equal(t, config.DefaultQueryMaxSamples, sut.QueryConf.MaxSamples, "should have filled querying defaults")
 }

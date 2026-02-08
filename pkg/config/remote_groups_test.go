@@ -72,8 +72,8 @@ func TestOnQueryFailDefaultValues(t *testing.T) {
 	sut := config.RemoteGroupsConfig{}
 	newSut := sut.FillDefaults()
 
-	assert.Equalf(t, config.StrategyFailAll, newSut.OnQueryFailStrategy,
+	assert.Equalf(t, config.FailStrategyFailAll, newSut.OnQueryFailStrategy,
 		"query failure strategy should be set to %s if the provided value is empty",
-		config.StrategyFailAll,
+		config.FailStrategyFailAll,
 	)
 }
