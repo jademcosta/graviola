@@ -82,7 +82,7 @@ func TestParse(t *testing.T) {
 			Level: "error",
 		},
 		StoragesConf: config.StoragesConfig{
-			MergeConf: config.MergeStrategyConfig{
+			MergeStrategy: config.MergeStrategyConfig{
 				Strategy: "type 2",
 			},
 			Groups: []config.RemoteGroupsConfig{
@@ -93,7 +93,7 @@ func TestParse(t *testing.T) {
 						Start: "now-6h",
 						End:   "now",
 					},
-					Servers: []config.RemoteConfig{
+					Remotes: []config.RemoteConfig{
 						{
 							Name:       "my server 1",
 							Address:    "https://localhost:9090",
@@ -108,7 +108,7 @@ func TestParse(t *testing.T) {
 						Start: "now-16h",
 						End:   "now-1h",
 					},
-					Servers: []config.RemoteConfig{
+					Remotes: []config.RemoteConfig{
 						{
 							Name:       "my server 11",
 							Address:    "https://localhost:9090",
@@ -139,7 +139,7 @@ func TestValidation(t *testing.T) {
 						Start: "now-6h",
 						End:   "now",
 					},
-					Servers: []config.RemoteConfig{
+					Remotes: []config.RemoteConfig{
 						{
 							Name:       "my server 1",
 							Address:    "https://localhost:9090",
@@ -154,7 +154,7 @@ func TestValidation(t *testing.T) {
 						Start: "now-16h",
 						End:   "now-1h",
 					},
-					Servers: []config.RemoteConfig{
+					Remotes: []config.RemoteConfig{
 						{
 							Name:       "my server 11",
 							Address:    "https://localhost:9090",
@@ -198,7 +198,7 @@ func TestFillDefaultsCallsItOnChildren(t *testing.T) {
 			Groups: []config.RemoteGroupsConfig{
 				{
 					Name: "group 1 name",
-					Servers: []config.RemoteConfig{
+					Remotes: []config.RemoteConfig{
 						{
 							Name:    "my server 1",
 							Address: "https://localhost:9090",
@@ -207,7 +207,7 @@ func TestFillDefaultsCallsItOnChildren(t *testing.T) {
 				},
 				{
 					Name: "group 2 name",
-					Servers: []config.RemoteConfig{
+					Remotes: []config.RemoteConfig{
 						{
 							Name:       "my server 11",
 							Address:    "https://localhost:9090",
@@ -235,6 +235,10 @@ func TestFillDefaultsCallsItOnChildren(t *testing.T) {
 	sut = sut.FillDefaults()
 	assert.Equal(t, config.DefaultPort, sut.APIConf.Port, "should have filled API defaults")
 	assert.Equal(t, config.DefaultLogLevel, sut.LogConf.Level, "should have filled Log defaults")
-	assert.Equal(t, config.DefaultMergeStrategyType, sut.StoragesConf.MergeConf.Strategy, "should have filled storage defaults")
+	assert.Equal(t, config.DefaultMergeStrategy, sut.StoragesConf.MergeStrategy.Strategy, "should have filled storage defaults")
 	assert.Equal(t, config.DefaultQueryMaxSamples, sut.QueryConf.MaxSamples, "should have filled querying defaults")
+
+	assert.Equal(t, config.DefaultMergeStrategy, sut.StoragesConf.MergeStrategy.Strategy, "should have filled storages defaults")
+	assert.Equal(t, config.DefaultMergeStrategy, sut.StoragesConf.Groups[0].MergeStrategy.Strategy,
+		"should have filled storages defaults")
 }

@@ -13,7 +13,9 @@ import (
 func TestGraviolaStorageComplyWithStorageSampleAndChunkQueryable(_ *testing.T) {
 	logger := graviolalog.NewNoopLogger()
 	groups := []storage.Querier{}
-	mergeStrategy := remotestoragegroup.MergeStrategyFactory(config.MergeStrategyAlwaysMerge)
+
+	mergeStrategy := remotestoragegroup.MergeStrategyFactory(
+		config.MergeStrategyConfig{Strategy: config.MergeStrategyAlwaysMerge})
 
 	dummyFunc := func(_ storage.SampleAndChunkQueryable) {}
 

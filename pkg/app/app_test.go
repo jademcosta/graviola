@@ -33,7 +33,7 @@ func TestOperationalRoutes(t *testing.T) {
 	mock1Srv := httptest.NewServer(mock1.mux)
 	defer mock1Srv.Close()
 
-	conf.StoragesConf.Groups[0].Servers[0].Address = mock1Srv.URL
+	conf.StoragesConf.Groups[0].Remotes[0].Address = mock1Srv.URL
 
 	app := app.NewApp(conf)
 	go func() {
@@ -78,7 +78,7 @@ func TestIntegrationAnswers422OnRemoteError(t *testing.T) {
 	mock1Srv := httptest.NewServer(mock1.mux)
 	defer mock1Srv.Close()
 
-	conf.StoragesConf.Groups[0].Servers[0].Address = mock1Srv.URL
+	conf.StoragesConf.Groups[0].Remotes[0].Address = mock1Srv.URL
 
 	app := app.NewApp(conf)
 	go func() {
@@ -146,7 +146,7 @@ func TestIntegrationQueryEngineUsesTheLookbackDelta(t *testing.T) {
 	mockRemote1Srv := httptest.NewServer(mockRemote1.mux)
 	defer mockRemote1Srv.Close()
 
-	conf.StoragesConf.Groups[0].Servers[0].Address = mockRemote1Srv.URL
+	conf.StoragesConf.Groups[0].Remotes[0].Address = mockRemote1Srv.URL
 
 	app := app.NewApp(conf)
 	go func() {
@@ -197,7 +197,7 @@ func TestIntegrationSingleRemoteSuccess(t *testing.T) {
 	mockRemote1Srv := httptest.NewServer(mockRemote1.mux)
 	defer mockRemote1Srv.Close()
 
-	conf.StoragesConf.Groups[0].Servers[0].Address = mockRemote1Srv.URL
+	conf.StoragesConf.Groups[0].Remotes[0].Address = mockRemote1Srv.URL
 
 	app := app.NewApp(conf)
 	go func() {

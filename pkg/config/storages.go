@@ -5,13 +5,13 @@ import (
 )
 
 type StoragesConfig struct {
-	MergeConf MergeStrategyConfig  `yaml:"merge_strategy"`
-	Groups    []RemoteGroupsConfig `yaml:"groups"`
+	MergeStrategy MergeStrategyConfig  `yaml:"merge_strategy"`
+	Groups        []RemoteGroupsConfig `yaml:"groups"`
 }
 
 func (storagesConf StoragesConfig) FillDefaults() StoragesConfig {
-	mergeConf := storagesConf.MergeConf.FillDefaults()
-	storagesConf.MergeConf = mergeConf
+	mergeConf := storagesConf.MergeStrategy.FillDefaults()
+	storagesConf.MergeStrategy = mergeConf
 
 	for i := 0; i < len(storagesConf.Groups); i++ {
 		groupConf := storagesConf.Groups[i].FillDefaults()
@@ -26,7 +26,7 @@ func (storagesConf StoragesConfig) IsValid() error {
 		return fmt.Errorf("cannot have empty groups list")
 	}
 
-	err := storagesConf.MergeConf.IsValid()
+	err := storagesConf.MergeStrategy.IsValid()
 	if err != nil {
 		return err
 	}

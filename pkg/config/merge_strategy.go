@@ -9,7 +9,11 @@ const (
 	MergeStrategyAlwaysMerge = "always_merge"
 	MergeStrategyKeepBiggest = "keep_biggest"
 )
-const DefaultMergeStrategyType = MergeStrategyAlwaysMerge
+const DefaultMergeStrategy = MergeStrategyAlwaysMerge
+
+var DefaultMergeStrategyConfig = MergeStrategyConfig{
+	Strategy: DefaultMergeStrategy,
+}
 
 type MergeStrategyConfig struct {
 	Strategy string `yaml:"type"`
@@ -18,7 +22,7 @@ type MergeStrategyConfig struct {
 
 func (mergeStratConf MergeStrategyConfig) FillDefaults() MergeStrategyConfig {
 	if mergeStratConf.Strategy == "" {
-		mergeStratConf.Strategy = DefaultMergeStrategyType
+		mergeStratConf.Strategy = DefaultMergeStrategy
 	}
 
 	return mergeStratConf
@@ -33,5 +37,5 @@ func (mergeStratConf MergeStrategyConfig) IsValid() error {
 }
 
 func listSupportedMergeStrategies() []string {
-	return []string{"keep_biggest", "always_merge"}
+	return []string{MergeStrategyAlwaysMerge, MergeStrategyKeepBiggest}
 }

@@ -8,17 +8,17 @@ import (
 
 func QueryFailureStrategyFactory(strategyName string) OnQueryFailureStrategy {
 	switch strategyName {
-	case config.StrategyFailAll:
+	case config.FailStrategyFailAll:
 		return &queryfailurestrategy.FailAllStrategy{}
-	case config.StrategyPartialResponse:
+	case config.FailStrategyPartialResponse:
 		return &queryfailurestrategy.PartialResponseStrategy{}
 	default:
 		panic("unrecognized failure strategy")
 	}
 }
 
-func MergeStrategyFactory(strategyName string) MergeStrategy {
-	switch strategyName {
+func MergeStrategyFactory(conf config.MergeStrategyConfig) MergeStrategy {
+	switch conf.Strategy {
 	case config.MergeStrategyAlwaysMerge:
 		return mergestrategy.NewAlwaysMergeStrategy()
 	case config.MergeStrategyKeepBiggest:
