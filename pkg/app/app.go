@@ -131,7 +131,7 @@ func initializeRemoteGroups(
 		group := remotestoragegroup.NewRemoteGroup(
 			logger,
 			groupConf.Name,
-			initializeRemotes(logger, metricz, groupConf.Servers, defaultQueryTimeout),
+			initializeRemotes(logger, metricz, groupConf.Remotes, defaultQueryTimeout),
 			failureStrategy,
 			mergeStrategy,
 		)

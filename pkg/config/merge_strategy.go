@@ -33,5 +33,5 @@ func (mergeStratConf MergeStrategyConfig) IsValid() error {
 }
 
 func listSupportedMergeStrategies() []string {
-	return []string{"keep_biggest", "always_merge"}
+	return []string{MergeStrategyAlwaysMerge, MergeStrategyKeepBiggest}
 }

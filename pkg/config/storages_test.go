@@ -15,7 +15,7 @@ func TestStoragesValidate(t *testing.T) {
 
 	sut.Groups = make([]config.RemoteGroupsConfig, 0)
 	sut.Groups = append(sut.Groups, config.RemoteGroupsConfig{Name: "first!!!", OnQueryFailStrategy: "fail_all",
-		Servers: []config.RemoteConfig{{Name: "remote 1", Address: "http://non-existent.something"}}})
+		Remotes: []config.RemoteConfig{{Name: "remote 1", Address: "http://non-existent.something"}}})
 	require.Error(t, sut.IsValid(), "should error when merge strategy is invalid")
 
 	sut.MergeConf = config.MergeStrategyConfig{}
