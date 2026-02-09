@@ -83,6 +83,20 @@ storages:
         # this time window)
         start: "now-6h"
         end: "now"
+      # [optional] default is type 'always_merge'. This configures how Graviola will merge the
+      # data from multiple remotes within this group.
+      # Possible values are:
+      # * keep_biggest - When 2 time-series from different remotes are excatly the same (but with
+      # different values), the one with the biggest number of datapoints in the response will be
+      # the one kept. If 2 or more time-series have the same count of datapoints, it will pick one at
+      # random.
+      # * always_merge - Will merge all the data into 1 single time-series (for time series that
+      # share the same label set). In case the result has 2 datapoints with the exact same timestamp,
+      # it will pick on at random. This means that if you have 2 time-series with the same label-set,
+      # each one with 20 datapoints, and no datapoint has the same timestamp, they will be merged to
+      # form a single time-series with 40 datapoints.
+      merge_strategy:
+        type: always_merge
       # [mandatory] The list of remote storages that belongs to this group
       remotes:
         # [mandatory] the name of this remote. Within a group, 2 different remotes cannot have

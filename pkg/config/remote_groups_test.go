@@ -9,7 +9,6 @@ import (
 )
 
 func TestOnQueryFailAcceptSpecificValues(t *testing.T) {
-
 	testCases := []struct {
 		value       string
 		shouldError bool
@@ -26,8 +25,11 @@ func TestOnQueryFailAcceptSpecificValues(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		sut := config.RemoteGroupsConfig{OnQueryFailStrategy: tc.value, Name: "some name",
-			Servers: []config.RemoteConfig{{Name: "some name", Address: "http://non-existent.something"}}}
+		sut := config.RemoteGroupsConfig{
+			MergeStrategy:       config.MergeStrategyConfig{Strategy: config.DefaultMergeStrategy},
+			OnQueryFailStrategy: tc.value, Name: "some name",
+			Remotes: []config.RemoteConfig{{Name: "some name", Address: "http://non-existent.something"}},
+		}
 		err := sut.IsValid()
 
 		if tc.shouldError {
@@ -39,7 +41,31 @@ func TestOnQueryFailAcceptSpecificValues(t *testing.T) {
 }
 
 func TestGroupsValidate(t *testing.T) {
-	sut := config.RemoteGroupsConfig{OnQueryFailStrategy: "fail_all"}
+	sut := config.RemoteGroupsConfig{
+		Name:                "group 1",
+		OnQueryFailStrategy: "fail_all",
+		MergeStrategy: config.MergeStrategyConfig{
+			Strategy: config.DefaultMergeStrategy,
+		},
+		Remotes: []config.RemoteConfig{
+			{Name: "some name", Address: "http://non-existent.something"},
+			{Name: "some name 2", Address: "http://non-existent.something"},
+		}}
+	require.NoError(t, sut.IsValid(), "should NOT error when everything is correct")
+
+	sut = config.RemoteGroupsConfig{
+		Name:                "group 1",
+		OnQueryFailStrategy: "fail_all",
+		MergeStrategy: config.MergeStrategyConfig{
+			Strategy: "",
+		},
+		Remotes: []config.RemoteConfig{
+			{Name: "some name", Address: "http://non-existent.something"},
+			{Name: "some name 2", Address: "http://non-existent.something"},
+		}}
+	require.Error(t, sut.IsValid(), "should error when no merge strategy is given is correct")
+
+	sut = config.RemoteGroupsConfig{OnQueryFailStrategy: "fail_all"}
 	require.Error(t, sut.IsValid(), "should error if name is empty")
 
 	sut = config.RemoteGroupsConfig{Name: "group 1"}
@@ -49,31 +75,29 @@ func TestGroupsValidate(t *testing.T) {
 	require.Error(t, sut.IsValid(), "should error remotes is empty")
 
 	sut = config.RemoteGroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
-		Servers: []config.RemoteConfig{
-			{Name: "some name", Address: "http://non-existent.something"},
-			{Name: "some name 2", Address: "http://non-existent.something"},
-		}}
-	require.NoError(t, sut.IsValid(), "should NOT error when everything is correct")
-
-	sut = config.RemoteGroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
-		Servers: []config.RemoteConfig{
+		Remotes: []config.RemoteConfig{
 			{Name: "some name", Address: "http://non-existent.something"},
 			{Name: "some name2", Address: "non-existent.something"}}}
 	require.Error(t, sut.IsValid(), "should error when underlying remote returns error")
 
 	sut = config.RemoteGroupsConfig{Name: "group 1", OnQueryFailStrategy: "fail_all",
-		Servers: []config.RemoteConfig{
+		Remotes: []config.RemoteConfig{
 			{Name: "some name", Address: "http://non-existent.something"},
 			{Name: "some name", Address: "http://non-existent.something"}}}
 	require.Error(t, sut.IsValid(), "should error when remotes have the same name")
 }
 
-func TestOnQueryFailDefaultValues(t *testing.T) {
+func TestRemoteGroupsDefaultValues(t *testing.T) {
 	sut := config.RemoteGroupsConfig{}
 	newSut := sut.FillDefaults()
 
-	assert.Equalf(t, config.StrategyFailAll, newSut.OnQueryFailStrategy,
+	assert.Equalf(t, config.FailStrategyFailAll, newSut.OnQueryFailStrategy,
 		"query failure strategy should be set to %s if the provided value is empty",
-		config.StrategyFailAll,
+		config.FailStrategyFailAll,
+	)
+
+	assert.Equalf(t, config.DefaultMergeStrategy, newSut.MergeStrategy.Strategy,
+		"merge strategy should be set to %s if the provided value is empty",
+		config.DefaultMergeStrategy,
 	)
 }

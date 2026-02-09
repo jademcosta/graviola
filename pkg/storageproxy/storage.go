@@ -24,7 +24,7 @@ func NewGraviolaStorage(
 		//TODO: should this fail strategy be the default? Allow to configure it
 		rootGroup: remotestoragegroup.NewRemoteGroup(
 			logger, "root", groups,
-			&queryfailurestrategy.FailAllStrategy{},
+			&queryfailurestrategy.FailAllStrategy{}, //FIXME: allow to config this
 			mergeStrategy,
 		),
 	}

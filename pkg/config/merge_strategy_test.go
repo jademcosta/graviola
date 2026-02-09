@@ -39,6 +39,6 @@ func TestMergeStrategyDefaultValues(t *testing.T) {
 	sut := config.MergeStrategyConfig{}
 	newSut := sut.FillDefaults()
 
-	assert.Equal(t, config.DefaultMergeStrategyType, newSut.Strategy,
-		"merge strategy type should be set to %s if the provided value is empty", config.DefaultMergeStrategyType)
+	assert.Equal(t, config.DefaultMergeStrategy, newSut.Strategy,
+		"merge strategy type should be set to %s if the provided value is empty", config.DefaultMergeStrategy)
 }
