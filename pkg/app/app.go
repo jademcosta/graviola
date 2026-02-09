@@ -162,7 +162,6 @@ func createPrometheusAPI(
 	conf config.GraviolaConfig,
 ) *api_v1.API {
 
-	//TODO: avoid all nils in the functions below. To avoid `panic`s
 	return api_v1.NewAPI(
 		queryEngine,
 		graviolaStorage,
@@ -214,5 +213,8 @@ func createPrometheusAPI(
 		false,                                  //ctZeroIngestionEnabled
 		conf.QueryConf.LookbackDeltaDuration(), // lookbackDelta
 		false,                                  // enableTypeAndUnitLabels
+		false,                                  // appendMetadata
+		nil,                                    //overrideErrorCode
+		nil,                                    //featureRegistry
 	)
 }
