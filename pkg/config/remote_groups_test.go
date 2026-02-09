@@ -9,7 +9,6 @@ import (
 )
 
 func TestOnQueryFailAcceptSpecificValues(t *testing.T) {
-
 	testCases := []struct {
 		value       string
 		shouldError bool
@@ -26,8 +25,11 @@ func TestOnQueryFailAcceptSpecificValues(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		sut := config.RemoteGroupsConfig{OnQueryFailStrategy: tc.value, Name: "some name",
-			Remotes: []config.RemoteConfig{{Name: "some name", Address: "http://non-existent.something"}}}
+		sut := config.RemoteGroupsConfig{
+			MergeStrategy:       config.MergeStrategyConfig{Strategy: config.DefaultMergeStrategy},
+			OnQueryFailStrategy: tc.value, Name: "some name",
+			Remotes: []config.RemoteConfig{{Name: "some name", Address: "http://non-existent.something"}},
+		}
 		err := sut.IsValid()
 
 		if tc.shouldError {

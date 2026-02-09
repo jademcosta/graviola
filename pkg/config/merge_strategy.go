@@ -11,6 +11,10 @@ const (
 )
 const DefaultMergeStrategy = MergeStrategyAlwaysMerge
 
+var DefaultMergeStrategyConfig = MergeStrategyConfig{
+	Strategy: DefaultMergeStrategy,
+}
+
 type MergeStrategyConfig struct {
 	Strategy string `yaml:"type"`
 	// Time string `yaml:"time"` //TODO: will be used in the future when dedup by time window is implemented

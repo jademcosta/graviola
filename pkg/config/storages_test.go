@@ -18,10 +18,11 @@ func TestStoragesValidate(t *testing.T) {
 		Remotes: []config.RemoteConfig{{Name: "remote 1", Address: "http://non-existent.something"}}})
 	require.Error(t, sut.IsValid(), "should error when merge strategy is invalid")
 
-	sut.MergeConf = config.MergeStrategyConfig{}
+	sut.MergeStrategy = config.MergeStrategyConfig{}
 	require.Error(t, sut.IsValid(), "should error when merge strategy errors")
 
-	sut.MergeConf = config.MergeStrategyConfig{Strategy: "always_merge"}
+	sut.MergeStrategy = config.MergeStrategyConfig{Strategy: "always_merge"}
+	sut.Groups[0].MergeStrategy = config.MergeStrategyConfig{Strategy: "always_merge"}
 	require.NoError(t, sut.IsValid(), "should NOT error when everything is valid")
 
 	sut.Groups = append(sut.Groups, config.RemoteGroupsConfig{})
@@ -40,7 +41,7 @@ func TestStoragesFillDefaults(t *testing.T) {
 	sut := config.StoragesConfig{}
 
 	sut = sut.FillDefaults()
-	assert.Equal(t, config.DefaultMergeStrategy, sut.MergeConf.Strategy, "should have called FillDefaults on children configs")
+	assert.Equal(t, config.DefaultMergeStrategy, sut.MergeStrategy.Strategy, "should have called FillDefaults on children configs")
 
 	sut = config.StoragesConfig{Groups: []config.RemoteGroupsConfig{{}, {}}}
 	sut = sut.FillDefaults()

@@ -45,7 +45,7 @@ func NewApp(conf config.GraviolaConfig) *App {
 
 	storageGroups := initializeRemoteGroups(
 		logger, metricRegistry, conf.StoragesConf.Groups, conf.QueryConf.TimeoutDuration())
-	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeConf.Strategy)
+	mainMergeStrategy := remotestoragegroup.MergeStrategyFactory(conf.StoragesConf.MergeStrategy)
 	graviolaStorage := storageproxy.NewGraviolaStorage(logger, storageGroups, mainMergeStrategy)
 
 	apiV1 := createPrometheusAPI(eng, graviolaStorage, logger, metricRegistry, conf)
@@ -125,8 +125,7 @@ func initializeRemoteGroups(
 
 	for _, groupConf := range groupsConf {
 		failureStrategy := remotestoragegroup.QueryFailureStrategyFactory(groupConf.OnQueryFailStrategy)
-		//FIXME: allow to configure this
-		mergeStrategy := remotestoragegroup.MergeStrategyFactory(config.MergeStrategyAlwaysMerge)
+		mergeStrategy := remotestoragegroup.MergeStrategyFactory(groupConf.MergeStrategy)
 
 		group := remotestoragegroup.NewRemoteGroup(
 			logger,

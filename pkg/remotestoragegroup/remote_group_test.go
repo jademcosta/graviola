@@ -25,7 +25,7 @@ import (
 var logg *slog.Logger = graviolalog.NewLogger(config.LogConfig{Level: "error"})
 
 var defaultFailStrategy = &queryfailurestrategy.FailAllStrategy{}
-var defaultMergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategy)
+var defaultMergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyConfig)
 
 func TestCloseIsSentToRemotes(t *testing.T) {
 	mockStorage1 := &mocks.RemoteStorageMock{}

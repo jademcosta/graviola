@@ -17,8 +17,8 @@ func QueryFailureStrategyFactory(strategyName string) OnQueryFailureStrategy {
 	}
 }
 
-func MergeStrategyFactory(strategyName string) MergeStrategy {
-	switch strategyName {
+func MergeStrategyFactory(conf config.MergeStrategyConfig) MergeStrategy {
+	switch conf.Strategy {
 	case config.MergeStrategyAlwaysMerge:
 		return mergestrategy.NewAlwaysMergeStrategy()
 	case config.MergeStrategyKeepBiggest:

@@ -19,6 +19,8 @@ storages:
   groups:
     - name: "the solo group"
       on_query_fail: fail_all
+      merge_strategy:
+        type: keep_biggest
       remotes:
         - name: "the server 1"
           address: "http://localhost:9090"

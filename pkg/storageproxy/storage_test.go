@@ -25,7 +25,7 @@ const anyMinTime = int64(0)
 const anyMaxTime = int64(1)
 
 var logg = graviolalog.NewLogger(config.LogConfig{Level: "error"})
-var defaultMergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategy)
+var defaultMergeStrategy = remotestoragegroup.MergeStrategyFactory(config.DefaultMergeStrategyConfig)
 
 func TestSelect(t *testing.T) {
 	mockStorage1 := &mocks.RemoteStorageMock{
